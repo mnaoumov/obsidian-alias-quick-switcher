@@ -1,0 +1,9 @@
+{
+  "author": "mnaoumov",
+  "authorUrl": "https://github.com/mnaoumov/",
+  "description": "Quick switcher that resolves aliases in every path segment, folder notes included.",
+  "id": "alias-quick-switcher",
+  "isDesktopOnly": false,
+  "name": "Alias Quick Switcher",
+  "version": "0.0.0"
+}

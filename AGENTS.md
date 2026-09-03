@@ -51,6 +51,31 @@ The workspace convention is that all plugins share the same architecture; intent
 - `MetadataCache.setCache__` fires a `changed` event carrying **no file**, an event shape the real `MetadataCache` never emits. Tests write into `metadataCache.cache__` directly and then trigger the event they are actually about, with the arguments Obsidian really passes.
 - The mock's `MetadataCache` re-parses a file's content on the vault's `create` event, so a hand-written cache entry is overwritten by it. A test about creation creates a real file instead.
 
+### The screenshot capture suites
+
+`npm run capture:screenshots` drives the switcher in a real Obsidian and writes
+`images/screenshots/screenshot-desktop-N.png` (five frames) and `screenshot-mobile-N.png` (four), desktop
+leg first because both legs share one machine. They exist because the two-line row is the one thing no
+assertion can settle — whether it READS as an explanation — and they double as the community-store
+listing shots.
+
+- The suites are named `*.desktop-capture.` / `*.android-capture.` so they match **none** of the standard
+  project globs: capturing opens a window and leaves a modal on screen to photograph it, which is not
+  something `npm run test:integration` should ever do.
+- The mobile leg runs on the **`obsidian_screenshots`** AVD, 900x1600 at density 320 — exactly the size the
+  store asks for, so no crop or rescale. The shared `obsidian_test` AVD cannot stand in: it is 1344x2992,
+  and resizing it at runtime recreates the activity and with it the WebView the session is attached to.
+- **`labelScreenshot` needs `sharp`**, an optional peer of `obsidian-integration-testing`. Without it every
+  frame fails at the caption step with `Cannot find package 'sharp'` — after the capture itself succeeded,
+  so the failure looks unrelated to what actually went wrong.
+- **A query that matches every segment whole highlights the entire first line**, which makes the highlight
+  indistinguishable from its absence. Frame 5 uses `Alp/Del/Ech` for that reason: partial runs put
+  highlighted and plain text side by side in the same word.
+- **`labelScreenshot` draws its band across the bottom of the frame**, which on desktop is Obsidian's
+  status bar but on a phone is the switcher's own search field — so the typed query is the one thing a
+  mobile frame does not show in full. The rows above it are what the frame is evidence for; do not caption
+  a mobile frame with something only the query could prove.
+
 ### Writing a `*.cross-platform.*` suite here
 
 Both constraints below were found the hard way, by every one of the eight suites failing on the first Android run after all eight passed on desktop.

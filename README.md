@@ -41,7 +41,7 @@ Segments are separated by `/` or by spaces, and a partial path works: `Delta/Ech
 A copy of the vault ships with every release. You can access it via any of the following:
 
 1. Running the **Alias Quick Switcher: Open demo vault** command.
-2. Downloading `alias-quick-switcher-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases).
+2. Downloading `alias-quick-switcher-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases). It unzips into a single `alias-quick-switcher-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
 ## Installation

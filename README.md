@@ -4,6 +4,40 @@
 
 You gave a note an alias so you could find it by the name you actually call it, and you gave its folder one too. Obsidian's quick switcher honours neither the moment you type a path: `Echo` finds the note, but `Alpha/Delta/Echo` finds nothing, because the built-in matches your query against the path **or** against an alias and never against a mixture of the two. This plugin matches segment by segment, where each segment may be satisfied by a real name **or** by an alias — the note's own, or the alias on a folder's folder note.
 
+<!-- markdownlint-disable MD033 -->
+
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-1.png"><img src="images/screenshots/screenshot-desktop-1.png" alt="Matched by name — one line, nothing to explain" width="600"></a>
+
+<details>
+<summary>More screenshots</summary>
+
+<div>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-2.png"><img src="images/screenshots/screenshot-desktop-2.png" alt="Alpha/Delta/Echo finds Alpha/Bravo/Charlie — and says so" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-3.png"><img src="images/screenshots/screenshot-desktop-3.png" alt="A folder answers to its folder note’s alias" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-4.png"><img src="images/screenshots/screenshot-desktop-4.png" alt="A partial path is enough" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-5.png"><img src="images/screenshots/screenshot-desktop-5.png" alt="Each matched run, against the muted real path" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="Matched by name — one line, nothing to explain" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="Alpha/Delta/Echo finds Alpha/Bravo/Charlie — and says so" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="A folder answers to its folder note’s alias" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-4.png"><img src="images/screenshots/screenshot-mobile-4.png" alt="A partial path is enough" width="270"></a>
+</div>
+
+</details>
+
+<!-- markdownlint-enable MD033 -->
+
+## Demo vault
+
+**The documentation is a demo vault.** Every feature has a note that explains what it does, with a worked example you can search yourself.
+
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
+
+A copy of the vault ships with every release. You can access it via any of the following:
+
+1. Running the **Alias Quick Switcher: Open demo vault** command.
+2. Downloading `alias-quick-switcher-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases). It unzips into a single `alias-quick-switcher-demo-vault-<version>` folder.
+3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
+
 ## What makes it different
 
 Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo` folder's folder note is aliased `Delta`. Obsidian's own switcher finds it from the first four queries and from none of the last three:
@@ -31,18 +65,6 @@ Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo`
 Assign a hotkey to **Alias Quick Switcher: Open quick switcher** and type a path. Obsidian's own quick switcher and its `Ctrl+O` are left exactly as they are — this plugin patches nothing, so you decide which of the two your muscle memory opens.
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
-
-## Demo vault
-
-**The documentation is a demo vault.** Every feature has a note that explains what it does, with a worked example you can search yourself.
-
-**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
-
-A copy of the vault ships with every release. You can access it via any of the following:
-
-1. Running the **Alias Quick Switcher: Open demo vault** command.
-2. Downloading `alias-quick-switcher-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases). It unzips into a single `alias-quick-switcher-demo-vault-<version>` folder.
-3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
 ## Installation
 

@@ -113,7 +113,9 @@ describe('desktop frames of the matched row', () => {
     const rows = await openSwitcher('Alpha/Delta/Echo');
 
     expect(rows.length).toBeGreaterThan(0);
-    await shoot(2, 'Alpha/Delta/Echo finds Alpha/Bravo/Charlie.md — and says so', WIDTH_IN_PIXELS, HEIGHT_IN_PIXELS);
+    // The caption names the path WITHOUT the extension, because that is what the row's second line shows.
+    // A caption that names a string its own frame does not contain is the kind of thing nobody re-checks.
+    await shoot(2, 'Alpha/Delta/Echo finds Alpha/Bravo/Charlie — and says so', WIDTH_IN_PIXELS, HEIGHT_IN_PIXELS);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
   it('3 - a folder row beside a note row', async () => {

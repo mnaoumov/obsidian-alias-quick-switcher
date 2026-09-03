@@ -106,7 +106,8 @@ describe('mobile frames of the matched row', () => {
     const rows = await openSwitcher('Alpha/Delta/Echo');
 
     expect(rows.length).toBeGreaterThan(0);
-    await shoot(2, 'Alpha/Delta/Echo finds Alpha/Bravo/Charlie.md — and says so');
+    // Without the extension, matching what the row's second line actually shows.
+    await shoot(2, 'Alpha/Delta/Echo finds Alpha/Bravo/Charlie — and says so');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
   it('3 - a folder row beside a note row', async () => {

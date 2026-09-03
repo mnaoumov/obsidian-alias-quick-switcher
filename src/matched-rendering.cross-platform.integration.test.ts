@@ -23,6 +23,7 @@ const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const STAMP_RANGE = 1000;
 
 interface RowRendering {
+  readonly hasAliasFlair: boolean;
   readonly hasSecondLine: boolean;
   readonly highlights: readonly string[];
   readonly labels: string;
@@ -103,10 +104,11 @@ describe('The matched rendering', () => {
           }
 
           const rendering: RowRendering = {
-            hasSecondLine: row.querySelector('.alias-quick-switcher-modal__path') !== null,
+            hasAliasFlair: row.querySelector(':scope .suggestion-aux .suggestion-flair') !== null,
+            hasSecondLine: row.querySelector('.suggestion-note') !== null,
             highlights: [...row.querySelectorAll('.suggestion-highlight')].map((el) => el.textContent),
-            labels: row.querySelector('.alias-quick-switcher-modal__labels')?.textContent ?? '',
-            realPath: row.querySelector('.alias-quick-switcher-modal__path')?.textContent ?? ''
+            labels: row.querySelector('.suggestion-title')?.textContent ?? '',
+            realPath: row.querySelector('.suggestion-note')?.textContent ?? ''
           };
 
           // Closed by clicking the modal background rather than by pressing Escape: the harness's
@@ -131,12 +133,24 @@ describe('The matched rendering', () => {
 
     const aliasRow = await readRow(`${alpha}/${delta}/${echo}`);
     const realNameRow = await readRow(`${alpha}/${bravo}/${charlie}`);
+    const leafOnlyRow = await readRow(echo);
 
     expect(aliasRow.labels).toBe(`${alpha}/${delta}/${echo}`);
-    expect(aliasRow.realPath).toBe(`${alpha}/${bravo}/${charlie}.md`);
+
+    // The second line drops the markdown extension, the way the built-in's own alias row does.
+    expect(aliasRow.realPath).toBe(`${alpha}/${bravo}/${charlie}`);
     expect(aliasRow.highlights).toHaveLength(3);
 
-    // Nothing about this match differs from the path, so a second line would only repeat it.
+    // The same flair the built-in puts on an alias hit.
+    expect(aliasRow.hasAliasFlair).toBe(true);
+
+    // Nothing about this match differs from the path, so a second line would only repeat it — and no
+    // Alias was involved, so there is nothing to flair either.
     expect(realNameRow.hasSecondLine).toBe(false);
+    expect(realNameRow.hasAliasFlair).toBe(false);
+
+    // A leaf-only alias hit renders the alias ALONE, which is exactly what the built-in does with it.
+    expect(leafOnlyRow.labels).toBe(echo);
+    expect(leafOnlyRow.realPath).toBe(`${alpha}/${bravo}/${charlie}`);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });

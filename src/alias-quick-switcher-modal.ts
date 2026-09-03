@@ -105,6 +105,14 @@ interface AliasQuickSwitcherModalConstructorParams {
  */
 interface Candidate {
   /**
+   * The path as the SECOND LINE shows it — the real path with the markdown extension dropped, the way
+   * Obsidian drops it everywhere else, and kept on any other file type where it is load-bearing.
+   * Distinct from {@link Candidate.path}, which is what a pick opens, and from
+   * {@link Candidate.plainPath}, which is what the rendering is compared against.
+   */
+  readonly displayPath: string;
+
+  /**
    * Every name this candidate answers to, lower-cased and joined, for the pre-filter.
    */
   readonly haystack: string;
@@ -220,19 +228,36 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
   public renderSuggestion(suggestion: Suggestion, el: HTMLElement): void {
     el.empty();
 
+    // The row is the BUILT-IN switcher's own shape, measured off it rather than guessed at: a
+    // `mod-complex` item holding `suggestion-content` > `suggestion-title` + `suggestion-note`, with the
+    // Alias marker in `suggestion-aux` > `suggestion-flair`. Obsidian already renders an alias hit that
+    // Way, so reusing the structure means this switcher inherits its styling — and every theme's — rather
+    // Than carrying a private copy that no theme has ever seen.
+    el.addClass('mod-complex');
+
+    const contentEl = el.createDiv({ cls: 'suggestion-content' });
+    const titleEl = contentEl.createDiv({ cls: 'suggestion-title' });
+
     if (suggestion.candidate.isFolder) {
       el.addClass('alias-quick-switcher-modal__folder');
-      setIcon(el.createSpan({ cls: 'alias-quick-switcher-modal__icon' }), 'lucide-folder');
+      setIcon(titleEl.createSpan({ cls: 'alias-quick-switcher-modal__icon' }), 'lucide-folder');
     }
 
-    const labelEl = el.createDiv({ cls: 'alias-quick-switcher-modal__labels' });
-    const renderedPath = this.renderLabels(suggestion, labelEl);
+    const renderedPath = this.renderLabels(suggestion, titleEl);
 
     // The real path is shown ONLY when the rendering above is not already it. Repeating an identical path
     // Under itself is noise, while omitting a DIFFERENT one leaves the user unable to tell what they are
     // About to open — which is the whole point of the two-line row.
     if (renderedPath !== suggestion.candidate.plainPath) {
-      el.createDiv({ cls: 'alias-quick-switcher-modal__path', text: suggestion.path });
+      contentEl.createDiv({ cls: 'suggestion-note', text: suggestion.candidate.displayPath });
+    }
+
+    // The same `lucide-forward` flair, with the same `Alias` label, that the built-in puts on an alias
+    // Hit. Without it the two-line shape is the row's only signal that an alias was involved, which is a
+    // Weaker one — and a different one from the marker the user already knows.
+    if (wasAliasUsed(suggestion)) {
+      const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+      setIcon(auxEl.createSpan({ attr: { 'aria-label': 'Alias' }, cls: 'suggestion-flair' }), 'lucide-forward');
     }
   }
 
@@ -286,12 +311,17 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     }
 
     const positions = [...this.buildAncestorPositions(file), { labels: this.labelIndex.getFileLabels(file) }];
+    const plainPath = buildPlainPath(positions);
     return {
+      // A note's extension is noise the built-in never shows; any other file's is what tells the user
+      // What they are about to open, so it stays. `plainPath` is already the path minus the extension —
+      // Its leaf position is the file's basename — which is what makes this a choice rather than a strip.
+      displayPath: file.extension === MARKDOWN_FILE_EXTENSION ? plainPath : file.path,
       haystack: buildHaystack(file.path, positions),
       isFolder: false,
       openTarget: file,
       path: file.path,
-      plainPath: buildPlainPath(positions),
+      plainPath,
       positions
     };
   }
@@ -311,6 +341,8 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
 
     const positions = [...this.buildAncestorPositions(folder), { labels: this.labelIndex.getFolderLabels(folder) }];
     return {
+      // A folder has no extension to drop, so the two are the same string.
+      displayPath: folder.path,
       haystack: buildHaystack(folder.path, positions),
       isFolder: true,
       openTarget: folderNote,
@@ -361,8 +393,19 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
   private renderLabels(suggestion: Suggestion, labelEl: HTMLElement): string {
     const renderedParts: string[] = [];
 
+    // A leaf-only alias hit renders the ALIAS ALONE, which is exactly what the built-in switcher does with
+    // The same match. Rendering the whole path there would put `Alpha/Bravo/Echo` over
+    // `Alpha/Bravo/Charlie` — two strings one word apart, where the second line earns its space least and
+    // Reads as duplication. The full as-matched path is kept for the case that earns it: an ANCESTOR
+    // Satisfied by an alias, which is the thing no other switcher can show.
+    const firstRenderedIndex = isLeafOnlyAliasMatch(suggestion) ? suggestion.candidate.positions.length - 1 : 0;
+
     for (const [index, position] of suggestion.candidate.positions.entries()) {
-      if (index > 0) {
+      if (index < firstRenderedIndex) {
+        continue;
+      }
+
+      if (index > firstRenderedIndex) {
         labelEl.appendText('/');
       }
 
@@ -470,6 +513,29 @@ function deduplicateByOpenTarget(suggestions: readonly MatchedSuggestion[]): Sug
 }
 
 /**
+ * Whether the ONLY position the query reached is the leaf, and an alias is what satisfied it — the exact
+ * match the built-in switcher already makes, and renders as the alias alone.
+ *
+ * @param suggestion - The suggestion being rendered.
+ * @returns Whether it is a leaf-only alias hit.
+ */
+function isLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
+  if (!suggestion.match) {
+    return false;
+  }
+
+  const leafIndex = suggestion.candidate.positions.length - 1;
+
+  // Read off `match.positions` rather than the candidate's, so a leaf satisfied by its REAL name — where
+  // The rendering is already the plain path and there is nothing to explain — is not caught by this.
+  if (!suggestion.match.positions[leafIndex]?.isAlias) {
+    return false;
+  }
+
+  return suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
+}
+
+/**
  * Reads a position's real name — always its first label, by construction.
  *
  * @param position - The position.
@@ -477,4 +543,15 @@ function deduplicateByOpenTarget(suggestions: readonly MatchedSuggestion[]): Sug
  */
 function readRealName(position: PathPosition): string {
   return ensureNonNullable(position.labels[0], 'Every position is built with its real name first').text;
+}
+
+/**
+ * Whether any position was satisfied by an alias rather than by its real name. The condition the built-in
+ * puts its flair on.
+ *
+ * @param suggestion - The suggestion being rendered.
+ * @returns Whether an alias was used.
+ */
+function wasAliasUsed(suggestion: Suggestion): boolean {
+  return suggestion.match?.positions.some((positionMatch) => positionMatch?.isAlias ?? false) ?? false;
 }

@@ -41,6 +41,16 @@ Manual equivalent: run the Command Palette entry **Alias Quick Switcher: Open qu
 
 Each segment of your query is matched against the real name **or** any alias of whatever sits at that position — the folder's folder note for an ancestor, the note itself for the last segment. Segments are separated by `/` or by spaces, and a partial path is enough, so `Delta/Echo` works too.
 
+## How a row reads
+
+A row is the same row Obsidian's own switcher draws, because it is built from the same pieces: what matched on top, the real path underneath when the two differ, and the alias marker on the right when an alias was involved.
+
+- Type `Echo` and you get **Echo** over `Alpha/Bravo/Charlie` — character for character what the built-in shows you, because this is the one match the built-in also makes.
+- Type `Alpha/Delta/Echo` and you get **Alpha/Delta/Echo** over `Alpha/Bravo/Charlie`. This is the row nothing else can draw: `Delta` is a *folder's* alias, and the top line is showing you that the folder answered to it.
+- Type `Alpha/Bravo/Charlie` and you get one line, no marker. Nothing about the match differs from the path, so there is nothing to explain.
+
+The bold runs are the characters your query actually covered, so a partial query like `Alp/Del/Ech` shows you exactly which letters landed where.
+
 ## Ranking
 
 A result matched entirely by real names ranks above one that needed an alias. Type `Alpha/Bravo/Charlie` and the plain path match still comes first; the alias renderings only ever appear below it. So turning this switcher on never reshuffles the results you are already used to.

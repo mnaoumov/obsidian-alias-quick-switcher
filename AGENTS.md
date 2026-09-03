@@ -50,3 +50,11 @@ The workspace convention is that all plugins share the same architecture; intent
 - The published `obsidian-test-mocks` has no `plugins` member on its strict `App`, and `resolveFolderNoteConfig` reads it. Tests assign one before use, the same way `obsidian-link-picker` does.
 - `MetadataCache.setCache__` fires a `changed` event carrying **no file**, an event shape the real `MetadataCache` never emits. Tests write into `metadataCache.cache__` directly and then trigger the event they are actually about, with the arguments Obsidian really passes.
 - The mock's `MetadataCache` re-parses a file's content on the vault's `create` event, so a hand-written cache entry is overwritten by it. A test about creation creates a real file instead.
+
+### Writing a `*.cross-platform.*` suite here
+
+Both constraints below were found the hard way, by every one of the eight suites failing on the first Android run after all eight passed on desktop.
+
+- **One `evalInObsidian` call is one `execute/sync`, and WebDriver caps a single script at 30 seconds.** A create-wait-open-type-assert flow fits inside that on a desktop and does not on a phone. Split the suite into several short calls and compute the stamp in the TEST, passing it in, so each call re-derives the same paths instead of carrying state across the boundary.
+- **The harness's trusted-input helpers are Electron-only.** `pressKey` reaches for `remote` and throws on Android. The `no-untrusted-input-events` rule pushes towards it, which is right for a desktop-only suite and unusable for a cross-platform one. Dismiss a modal by clicking `.modal-bg` instead — a plain click is the one gesture that works on both.
+- **A timed-out closure wedges the shared WebDriver session**, so every suite after it fails in ~45 ms with no useful error. When a run collapses like that, re-run the first failing file alone before believing anything about the ones behind it.

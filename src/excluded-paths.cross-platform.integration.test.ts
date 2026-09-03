@@ -9,75 +9,53 @@ import {
  * The `excludedPathPatterns` setting, end to end against a real Obsidian: a note the user excluded is
  * never offered, and the setting takes effect on the next open with no reload.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47).
+ * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
-const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
+const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
-interface ExcludedPathsResult {
-  readonly wasOfferedAfterExcluding: boolean;
-  readonly wasOfferedBeforeExcluding: boolean;
-}
+const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
+
+const SETTLE_DELAY_IN_MILLISECONDS = 500;
+
+const STAMP_RANGE = 1000;
 
 describe('The excluded paths setting', () => {
   it('stops offering a note as soon as its folder is excluded', async () => {
-    const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, pluginId }): Promise<ExcludedPathsResult> {
-        interface SwitcherSettingsLike {
-          excludedPathPatterns: string[];
-        }
+    const stamp = `${Date.now().toString()}-${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
+    const archive = `Archive-${stamp}`;
+    const noteName = `Old-${stamp}`;
 
-        interface SettingsEditor {
-          editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
-        }
-
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 30_000;
-        const SETTLE_DELAY_IN_MILLISECONDS = 400;
-        const stamp = `${Date.now().toString()}-${Math.floor(performance.now()).toString()}`;
-        const archive = `Archive-${stamp}`;
-        const noteName = `Old-${stamp}`;
-
-        await app.vault.createFolder(archive);
-        await app.vault.create(`${archive}/${noteName}.md`, 'archived');
+    await evalInObsidian({
+      async callback({ app, archive: archiveFolder, lib: { waitUntil }, noteName: name, waitTimeoutInMilliseconds }): Promise<void> {
+        await app.vault.createFolder(archiveFolder);
+        await app.vault.create(`${archiveFolder}/${name}.md`, 'archived');
         await waitUntil({
           message: 'the note is in the vault',
-          predicate: () => app.vault.getFileByPath(`${archive}/${noteName}.md`) !== null,
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          predicate: () => app.vault.getFileByPath(`${archiveFolder}/${name}.md`) !== null,
+          timeoutInMilliseconds: waitTimeoutInMilliseconds
         });
+      },
+      input: { archive, noteName, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+    });
 
-        const plugin = app.plugins.getPlugin(pluginId);
-        if (!plugin) {
-          throw new Error('The plugin is not enabled.');
-        }
-
-        // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-        // Base keeps protected, so a version that renamed it must fail loudly here rather than at the
-        // First property access.
-        if (!('pluginSettingsComponent' in plugin)) {
-          throw new Error('The plugin exposes no settings component.');
-        }
-
-        const settingsComponentCandidate: unknown = plugin.pluginSettingsComponent;
-        if (typeof settingsComponentCandidate !== 'object' || settingsComponentCandidate === null || !('editAndSave' in settingsComponentCandidate)) {
-          throw new TypeError('The settings component cannot save.');
-        }
-
-        const settingsComponent = settingsComponentCandidate as SettingsEditor;
-
-        async function checkIsOffered(): Promise<boolean> {
+    async function checkIsOffered(): Promise<boolean> {
+      return await evalInObsidian({
+        async callback({ app, lib: { waitUntil }, noteName: name, pluginId, settleDelayInMilliseconds, waitTimeoutInMilliseconds }): Promise<boolean> {
           await waitUntil({
             message: 'no switcher left open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           app.commands.executeCommandById(`${pluginId}:open`);
           await waitUntil({
             message: 'the switcher is open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
@@ -87,45 +65,83 @@ describe('The excluded paths setting', () => {
 
           // A dispatched event rather than trusted input (G107): the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
-          input.value = noteName;
+          input.value = name;
           input.dispatchEvent(new Event('input', { bubbles: true }));
 
-          // A short settle rather than a `waitUntil`: the assertion is about a row being ABSENT, and
+          // A settle rather than a `waitUntil`: one of the two assertions is about a row being ABSENT, and
           // Waiting for an absence that is already true would pass instantly whether or not the list had
           // Been rendered yet.
-          await sleep(SETTLE_DELAY_IN_MILLISECONDS);
-          const isOffered = [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(noteName));
+          await sleep(settleDelayInMilliseconds);
+          const isOffered = [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(name));
 
-          // Trusted input, so the modal really receives the key the way a user's Escape reaches it.
-          pressKey({ key: 'Escape' });
+          // Closed by clicking the modal background rather than by pressing Escape: the harness's
+          // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
+          // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
+          // That works on both.
+          const background = document.querySelector('.modal-bg');
+          if (background instanceof HTMLElement) {
+            background.click();
+          }
           await waitUntil({
             message: 'the switcher closed',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           return isOffered;
+        },
+        input: {
+          noteName,
+          pluginId: PLUGIN_ID,
+          settleDelayInMilliseconds: SETTLE_DELAY_IN_MILLISECONDS,
+          waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         }
+      });
+    }
 
-        const wasOfferedBeforeExcluding = await checkIsOffered();
+    async function setExcludedPaths(patterns: string[]): Promise<void> {
+      await evalInObsidian({
+        async callback({ app, patterns: newPatterns, pluginId }): Promise<void> {
+          interface SwitcherSettingsLike {
+            excludedPathPatterns: string[];
+          }
 
-        await settingsComponent.editAndSave((settings) => {
-          settings.excludedPathPatterns = [archive];
-        });
+          interface SettingsEditor {
+            editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
+          }
 
-        const wasOfferedAfterExcluding = await checkIsOffered();
+          const plugin = app.plugins.getPlugin(pluginId);
+          if (!plugin) {
+            throw new Error('The plugin is not enabled.');
+          }
 
-        // Left as it was found, because these suites share one Obsidian and one settings file.
-        await settingsComponent.editAndSave((settings) => {
-          settings.excludedPathPatterns = [];
-        });
+          // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
+          // Base keeps protected, so a version that renamed it must fail loudly here rather than at the
+          // First property access.
+          if (!('pluginSettingsComponent' in plugin)) {
+            throw new Error('The plugin exposes no settings component.');
+          }
 
-        return { wasOfferedAfterExcluding, wasOfferedBeforeExcluding };
-      },
-      input: { pluginId: PLUGIN_ID }
-    });
+          const candidate: unknown = plugin.pluginSettingsComponent;
+          if (typeof candidate !== 'object' || candidate === null || !('editAndSave' in candidate)) {
+            throw new TypeError('The settings component cannot save.');
+          }
 
-    expect(result.wasOfferedBeforeExcluding).toBe(true);
-    expect(result.wasOfferedAfterExcluding).toBe(false);
+          await (candidate as SettingsEditor).editAndSave((settings) => {
+            settings.excludedPathPatterns = newPatterns;
+          });
+        },
+        input: { patterns, pluginId: PLUGIN_ID }
+      });
+    }
+
+    const wasOfferedBeforeExcluding = await checkIsOffered();
+    await setExcludedPaths([archive]);
+    const wasOfferedAfterExcluding = await checkIsOffered();
+    // Left as it was found, because these suites share one Obsidian and one settings file.
+    await setExcludedPaths([]);
+
+    expect(wasOfferedBeforeExcluding).toBe(true);
+    expect(wasOfferedAfterExcluding).toBe(false);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });

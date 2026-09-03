@@ -9,73 +9,51 @@ import {
  * The `shouldIncludeNonMarkdownFiles` setting, end to end against a real Obsidian: files that are not
  * notes are left out until the user asks for them, the way Obsidian's own switcher behaves.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47).
+ * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
-const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
+const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
-interface IncludeNonMarkdownResult {
-  readonly wasOfferedWhenIncluded: boolean;
-  readonly wasOfferedWhenNotIncluded: boolean;
-}
+const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
+
+const SETTLE_DELAY_IN_MILLISECONDS = 500;
+
+const STAMP_RANGE = 1000;
 
 describe('The include non-markdown files setting', () => {
   it('leaves a canvas out by default and offers it once turned on', async () => {
-    const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, pluginId }): Promise<IncludeNonMarkdownResult> {
-        interface SwitcherSettingsLike {
-          shouldIncludeNonMarkdownFiles: boolean;
-        }
+    const stamp = `${Date.now().toString()}-${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
+    const canvasName = `Diagram-${stamp}`;
 
-        interface SettingsEditor {
-          editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
-        }
-
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 30_000;
-        const SETTLE_DELAY_IN_MILLISECONDS = 400;
-        const stamp = `${Date.now().toString()}-${Math.floor(performance.now()).toString()}`;
-        const canvasName = `Diagram-${stamp}`;
-
-        await app.vault.create(`${canvasName}.canvas`, '{}');
+    await evalInObsidian({
+      async callback({ app, canvasName: name, lib: { waitUntil }, waitTimeoutInMilliseconds }): Promise<void> {
+        await app.vault.create(`${name}.canvas`, '{}');
         await waitUntil({
           message: 'the canvas is in the vault',
-          predicate: () => app.vault.getFileByPath(`${canvasName}.canvas`) !== null,
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          predicate: () => app.vault.getFileByPath(`${name}.canvas`) !== null,
+          timeoutInMilliseconds: waitTimeoutInMilliseconds
         });
+      },
+      input: { canvasName, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+    });
 
-        const plugin = app.plugins.getPlugin(pluginId);
-        if (!plugin) {
-          throw new Error('The plugin is not enabled.');
-        }
-
-        // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-        // Base keeps protected, so a version that renamed it must fail loudly here rather than at the
-        // First property access.
-        if (!('pluginSettingsComponent' in plugin)) {
-          throw new Error('The plugin exposes no settings component.');
-        }
-
-        const settingsComponentCandidate: unknown = plugin.pluginSettingsComponent;
-        if (typeof settingsComponentCandidate !== 'object' || settingsComponentCandidate === null || !('editAndSave' in settingsComponentCandidate)) {
-          throw new TypeError('The settings component cannot save.');
-        }
-
-        const settingsComponent = settingsComponentCandidate as SettingsEditor;
-
-        async function checkIsOffered(): Promise<boolean> {
+    async function checkIsOffered(): Promise<boolean> {
+      return await evalInObsidian({
+        async callback({ app, canvasName: name, lib: { waitUntil }, pluginId, settleDelayInMilliseconds, waitTimeoutInMilliseconds }): Promise<boolean> {
           await waitUntil({
             message: 'no switcher left open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           app.commands.executeCommandById(`${pluginId}:open`);
           await waitUntil({
             message: 'the switcher is open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
@@ -85,44 +63,81 @@ describe('The include non-markdown files setting', () => {
 
           // A dispatched event rather than trusted input (G107): the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
-          input.value = canvasName;
+          input.value = name;
           input.dispatchEvent(new Event('input', { bubbles: true }));
 
-          // A short settle rather than a `waitUntil`, because one of the two assertions is about a row
-          // Being ABSENT.
-          await sleep(SETTLE_DELAY_IN_MILLISECONDS);
-          const isOffered = [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(canvasName));
+          // A settle rather than a `waitUntil`, because one of the two assertions is about a row being
+          // ABSENT.
+          await sleep(settleDelayInMilliseconds);
+          const isOffered = [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(name));
 
-          // Trusted input, so the modal really receives the key the way a user's Escape reaches it.
-          pressKey({ key: 'Escape' });
+          // Closed by clicking the modal background rather than by pressing Escape: the harness's
+          // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
+          // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
+          // That works on both.
+          const background = document.querySelector('.modal-bg');
+          if (background instanceof HTMLElement) {
+            background.click();
+          }
           await waitUntil({
             message: 'the switcher closed',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           return isOffered;
+        },
+        input: {
+          canvasName,
+          pluginId: PLUGIN_ID,
+          settleDelayInMilliseconds: SETTLE_DELAY_IN_MILLISECONDS,
+          waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         }
+      });
+    }
 
-        const wasOfferedWhenNotIncluded = await checkIsOffered();
+    async function setShouldIncludeNonMarkdownFiles(shouldInclude: boolean): Promise<void> {
+      await evalInObsidian({
+        async callback({ app, pluginId, shouldInclude: newValue }): Promise<void> {
+          interface SwitcherSettingsLike {
+            shouldIncludeNonMarkdownFiles: boolean;
+          }
 
-        await settingsComponent.editAndSave((settings) => {
-          settings.shouldIncludeNonMarkdownFiles = true;
-        });
+          interface SettingsEditor {
+            editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
+          }
 
-        const wasOfferedWhenIncluded = await checkIsOffered();
+          const plugin = app.plugins.getPlugin(pluginId);
+          if (!plugin) {
+            throw new Error('The plugin is not enabled.');
+          }
 
-        // Left as it was found, because these suites share one Obsidian and one settings file.
-        await settingsComponent.editAndSave((settings) => {
-          settings.shouldIncludeNonMarkdownFiles = false;
-        });
+          // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
+          // Base keeps protected, so a version that renamed it must fail loudly here.
+          if (!('pluginSettingsComponent' in plugin)) {
+            throw new Error('The plugin exposes no settings component.');
+          }
 
-        return { wasOfferedWhenIncluded, wasOfferedWhenNotIncluded };
-      },
-      input: { pluginId: PLUGIN_ID }
-    });
+          const candidate: unknown = plugin.pluginSettingsComponent;
+          if (typeof candidate !== 'object' || candidate === null || !('editAndSave' in candidate)) {
+            throw new TypeError('The settings component cannot save.');
+          }
 
-    expect(result.wasOfferedWhenNotIncluded).toBe(false);
-    expect(result.wasOfferedWhenIncluded).toBe(true);
+          await (candidate as SettingsEditor).editAndSave((settings) => {
+            settings.shouldIncludeNonMarkdownFiles = newValue;
+          });
+        },
+        input: { pluginId: PLUGIN_ID, shouldInclude }
+      });
+    }
+
+    const wasOfferedWhenNotIncluded = await checkIsOffered();
+    await setShouldIncludeNonMarkdownFiles(true);
+    const wasOfferedWhenIncluded = await checkIsOffered();
+    // Left as it was found, because these suites share one Obsidian and one settings file.
+    await setShouldIncludeNonMarkdownFiles(false);
+
+    expect(wasOfferedWhenNotIncluded).toBe(false);
+    expect(wasOfferedWhenIncluded).toBe(true);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });

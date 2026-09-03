@@ -12,86 +12,58 @@ import {
  * well the query matched instead and deliberately gives that up — here the alias hit is the exact one, so
  * it comes first.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47).
+ * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
-const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
+const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
-interface RankingModeResult {
-  readonly firstRowUnderLinkPicker: string;
-  readonly firstRowUnderTiered: string;
-}
+const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
+
+const STAMP_RANGE = 1000;
 
 describe('The ranking setting', () => {
   it('puts real names first under tiered ranking and the strongest match first under link picker ranking', async () => {
-    const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, pluginId }): Promise<RankingModeResult> {
-        interface SwitcherSettingsLike {
-          rankingMode: string;
-        }
+    const stamp = `${Date.now().toString()}${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
+    const query = `Kilo${stamp}`;
+    // The real-name note only PREFIXES the query, while the aliased note matches it EXACTLY. So the two
+    // Orders genuinely disagree: one leads with the real name, the other with the stronger match.
+    const realNameNote = `${query}Extra`;
+    const aliasedNote = `Lima${stamp}`;
 
-        interface SettingsEditor {
-          editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
-        }
-
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 30_000;
-        const stamp = `${Date.now().toString()}-${Math.floor(performance.now()).toString()}`;
-        const query = `Kilo${stamp}`;
-
-        // The real-name note only PREFIXES the query, while the aliased note matches it EXACTLY. So the
-        // Two orders genuinely disagree: one leads with the real name, the other with the stronger match.
-        const realNameNote = `${query}Extra`;
-        const aliasedNote = `Lima${stamp}`;
-
-        await app.vault.create(`${realNameNote}.md`, 'body');
-        await app.vault.create(`${aliasedNote}.md`, `---\naliases:\n  - ${query}\n---\n`);
-
-        // `getFileByPath` answers `null` until the vault has caught up and `getFileCache` needs a real
-        // File, so the two questions are asked together rather than nested.
-        function checkHasFrontmatter(path: string): boolean {
-          const file = app.vault.getFileByPath(path);
-          return file !== null && Boolean(app.metadataCache.getFileCache(file)?.frontmatter);
-        }
+    await evalInObsidian({
+      async callback({ aliasedNote: aliased, app, lib: { waitUntil }, query: aliasText, realNameNote: realName, waitTimeoutInMilliseconds }): Promise<void> {
+        await app.vault.create(`${realName}.md`, 'body');
+        await app.vault.create(`${aliased}.md`, `---\naliases:\n  - ${aliasText}\n---\n`);
 
         await waitUntil({
           message: 'the alias is in the metadata cache',
-          predicate: () => checkHasFrontmatter(`${aliasedNote}.md`),
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          predicate: () => {
+            const file = app.vault.getFileByPath(`${aliased}.md`);
+            return file !== null && Boolean(app.metadataCache.getFileCache(file)?.frontmatter);
+          },
+          timeoutInMilliseconds: waitTimeoutInMilliseconds
         });
+      },
+      input: { aliasedNote, query, realNameNote, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+    });
 
-        const plugin = app.plugins.getPlugin(pluginId);
-        if (!plugin) {
-          throw new Error('The plugin is not enabled.');
-        }
-
-        // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-        // Base keeps protected, so a version that renamed it must fail loudly here rather than at the
-        // First property access.
-        if (!('pluginSettingsComponent' in plugin)) {
-          throw new Error('The plugin exposes no settings component.');
-        }
-
-        const settingsComponentCandidate: unknown = plugin.pluginSettingsComponent;
-        if (typeof settingsComponentCandidate !== 'object' || settingsComponentCandidate === null || !('editAndSave' in settingsComponentCandidate)) {
-          throw new TypeError('The settings component cannot save.');
-        }
-
-        const settingsComponent = settingsComponentCandidate as SettingsEditor;
-
-        async function readFirstRow(): Promise<string> {
+    async function readFirstRow(): Promise<string> {
+      return await evalInObsidian({
+        async callback({ aliasedNote: aliased, app, lib: { waitUntil }, pluginId, query: currentQuery, realNameNote: realName, waitTimeoutInMilliseconds }): Promise<string> {
           await waitUntil({
             message: 'no switcher left open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           app.commands.executeCommandById(`${pluginId}:open`);
           await waitUntil({
             message: 'the switcher is open',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
@@ -101,51 +73,83 @@ describe('The ranking setting', () => {
 
           // A dispatched event rather than trusted input (G107): the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
-          input.value = query;
+          input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));
 
           await waitUntil({
             message: 'both notes are offered',
             predicate: () => {
               const rows = [...document.querySelectorAll('.suggestion-item')];
-              return rows.some((el) => el.textContent.includes(realNameNote)) && rows.some((el) => el.textContent.includes(aliasedNote));
+              return rows.some((el) => el.textContent.includes(realName)) && rows.some((el) => el.textContent.includes(aliased));
             },
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           const firstRowText = document.querySelector('.suggestion-item')?.textContent ?? '';
 
-          // Trusted input, so the modal really receives the key the way a user's Escape reaches it.
-          pressKey({ key: 'Escape' });
+          // Closed by clicking the modal background rather than by pressing Escape: the harness's
+          // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
+          // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
+          // That works on both.
+          const background = document.querySelector('.modal-bg');
+          if (background instanceof HTMLElement) {
+            background.click();
+          }
           await waitUntil({
             message: 'the switcher closed',
             predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            timeoutInMilliseconds: waitTimeoutInMilliseconds
           });
 
           return firstRowText;
-        }
+        },
+        input: { aliasedNote, pluginId: PLUGIN_ID, query, realNameNote, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      });
+    }
 
-        const firstRowUnderTiered = await readFirstRow();
+    async function setRankingMode(mode: string): Promise<void> {
+      await evalInObsidian({
+        async callback({ app, mode: newMode, pluginId }): Promise<void> {
+          interface SwitcherSettingsLike {
+            rankingMode: string;
+          }
 
-        await settingsComponent.editAndSave((settings) => {
-          settings.rankingMode = 'LinkPicker';
-        });
+          interface SettingsEditor {
+            editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
+          }
 
-        const firstRowUnderLinkPicker = await readFirstRow();
+          const plugin = app.plugins.getPlugin(pluginId);
+          if (!plugin) {
+            throw new Error('The plugin is not enabled.');
+          }
 
-        // Left as it was found, because these suites share one Obsidian and one settings file.
-        await settingsComponent.editAndSave((settings) => {
-          settings.rankingMode = 'Tiered';
-        });
+          // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
+          // Base keeps protected, so a version that renamed it must fail loudly here.
+          if (!('pluginSettingsComponent' in plugin)) {
+            throw new Error('The plugin exposes no settings component.');
+          }
 
-        return { firstRowUnderLinkPicker, firstRowUnderTiered };
-      },
-      input: { pluginId: PLUGIN_ID }
-    });
+          const candidate: unknown = plugin.pluginSettingsComponent;
+          if (typeof candidate !== 'object' || candidate === null || !('editAndSave' in candidate)) {
+            throw new TypeError('The settings component cannot save.');
+          }
 
-    expect(result.firstRowUnderTiered).toMatch(/^Kilo.+Extra/);
-    expect(result.firstRowUnderLinkPicker).toMatch(/^Kilo/);
-    expect(result.firstRowUnderLinkPicker).not.toBe(result.firstRowUnderTiered);
+          await (candidate as SettingsEditor).editAndSave((settings) => {
+            settings.rankingMode = newMode;
+          });
+        },
+        input: { mode, pluginId: PLUGIN_ID }
+      });
+    }
+
+    const firstRowUnderTiered = await readFirstRow();
+    await setRankingMode('LinkPicker');
+    const firstRowUnderLinkPicker = await readFirstRow();
+    // Left as it was found, because these suites share one Obsidian and one settings file.
+    await setRankingMode('Tiered');
+
+    expect(firstRowUnderTiered.startsWith(realNameNote)).toBe(true);
+    expect(firstRowUnderLinkPicker.startsWith(query)).toBe(true);
+    expect(firstRowUnderLinkPicker).not.toBe(firstRowUnderTiered);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });

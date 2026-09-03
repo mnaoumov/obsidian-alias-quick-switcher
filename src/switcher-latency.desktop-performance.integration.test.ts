@@ -125,7 +125,7 @@ describe('Per-keystroke latency at real scale', () => {
         const candidateCount = app.vault.getMarkdownFiles().length;
 
         // Trusted input, so the modal really receives the key the way a user's Escape reaches it.
-        pressKey({ key: 'Escape' });
+        await pressKey({ key: 'Escape' });
 
         const sorted = [...durations].sort((a, b) => a - b);
 

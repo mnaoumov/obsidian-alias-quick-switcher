@@ -45,6 +45,7 @@ import { SegmentMatchMode } from './segment-matcher.ts';
 const VAULT_FILES: Record<string, string> = {
   'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n',
   'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n',
+  'Alpha/Bravo/Sketch.canvas': '{}',
   'Alpha/Hotel/India.md': 'plain',
   'Archive/Old Note.md': 'archived',
   'Diagram.canvas': '{}'
@@ -190,8 +191,33 @@ describe('the empty query', () => {
 describe('renderSuggestion', () => {
   it('should render the path AS MATCHED, with the real path beneath it', () => {
     const el = renderFirst('Alpha/Delta/Echo');
-    expect(el.querySelector('.alias-quick-switcher-modal__labels')?.textContent).toBe('Alpha/Delta/Echo');
-    expect(el.querySelector('.alias-quick-switcher-modal__path')?.textContent).toBe('Alpha/Bravo/Charlie.md');
+    expect(el.querySelector('.suggestion-title')?.textContent).toBe('Alpha/Delta/Echo');
+    expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Charlie');
+  });
+
+  /*
+   * The second line drops the markdown extension because the built-in drops it — its own alias row reads
+   * `Alpha/Bravo/Charlie`, measured off a real Obsidian. It also makes the line the row DRAWS and the line
+   * the row DECIDES BY (`plainPath`) the same string, which they were not before.
+   */
+  it('should keep the extension of a file that is not a note', () => {
+    settings.shouldIncludeNonMarkdownFiles = true;
+    const el = renderFirst('Delta/Sketch');
+    expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Sketch.canvas');
+  });
+
+  /*
+   * The marker the built-in already puts on an alias hit — `lucide-forward`, labelled `Alias` — so the
+   * two switchers signal the same thing the same way.
+   */
+  it('should flair a row an alias reached', () => {
+    const el = renderFirst('Alpha/Delta/Echo');
+    expect(el.querySelector(':scope .suggestion-aux .suggestion-flair')?.getAttribute('aria-label')).toBe('Alias');
+  });
+
+  it('should not flair a row matched by real names alone', () => {
+    const el = renderFirst('Alpha/Bravo/Charlie');
+    expect(el.querySelector('.suggestion-flair')).toBeNull();
   });
 
   it('should highlight only the characters the query covered', () => {
@@ -200,9 +226,25 @@ describe('renderSuggestion', () => {
       .toStrictEqual(['Alpha', 'Delta', 'Ech']);
   });
 
-  it('should leave an unmatched position rendered by its real name', () => {
+  /*
+   * A leaf-only alias hit is the one match the BUILT-IN also makes, and it renders the alias alone —
+   * `Echo` over `Alpha/Bravo/Charlie`, measured off a real Obsidian. Rendering the whole path here would
+   * put `Alpha/Bravo/Echo` over `Alpha/Bravo/Charlie`: two strings one word apart, which is where the
+   * second line earns its space least. The as-matched path is kept for an ANCESTOR alias, above.
+   */
+  it('should render a leaf-only alias hit as the alias alone', () => {
     const el = renderFirst('Echo');
-    expect(el.querySelector('.alias-quick-switcher-modal__labels')?.textContent).toBe('Alpha/Bravo/Echo');
+    expect(el.querySelector('.suggestion-title')?.textContent).toBe('Echo');
+    expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Charlie');
+  });
+
+  /*
+   * An ancestor reached by its REAL name is still rendered, because the user typed it and the row has to
+   * show that it matched. Only a hit that reached nothing but the leaf collapses.
+   */
+  it('should keep an ancestor the query reached by its real name', () => {
+    const el = renderFirst('Bravo/Echo');
+    expect(el.querySelector('.suggestion-title')?.textContent).toBe('Alpha/Bravo/Echo');
   });
 
   /*
@@ -211,8 +253,8 @@ describe('renderSuggestion', () => {
    */
   it('should omit the second line when nothing was matched by an alias', () => {
     const el = renderFirst('Alpha/Bravo/Charlie');
-    expect(el.querySelector('.alias-quick-switcher-modal__labels')?.textContent).toBe('Alpha/Bravo/Charlie');
-    expect(el.querySelector('.alias-quick-switcher-modal__path')).toBeNull();
+    expect(el.querySelector('.suggestion-title')?.textContent).toBe('Alpha/Bravo/Charlie');
+    expect(el.querySelector('.suggestion-note')).toBeNull();
   });
 
   it('should mark a folder row as one', () => {
@@ -224,7 +266,8 @@ describe('renderSuggestion', () => {
   it('should render a recent row without any match rendering', () => {
     castTo<RecentFileTrackerMock>(app).workspace.recentFileTracker.lastOpenFiles = ['Alpha/Bravo/Charlie.md'];
     const el = renderFirst('');
-    expect(el.querySelector('.alias-quick-switcher-modal__labels')?.textContent).toBe('Alpha/Bravo/Charlie');
+    expect(el.querySelector('.suggestion-title')?.textContent).toBe('Alpha/Bravo/Charlie');
+    expect(el.querySelector('.suggestion-flair')).toBeNull();
   });
 });
 

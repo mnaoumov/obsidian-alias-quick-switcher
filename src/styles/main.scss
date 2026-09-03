@@ -1,14 +1,14 @@
 /**
- * The switcher's rows are two lines: the path AS MATCHED on top, and the real path underneath whenever the
- * two differ. Without the second line a row reached through an alias is indistinguishable from one reached
- * by name, which is the whole thing this plugin exists to show.
+ * The switcher's rows are the BUILT-IN switcher's own shape — `suggestion-content` wrapping a
+ * `suggestion-title` and, when the match differs from the real path, a `suggestion-note`, with the alias
+ * flair in `suggestion-aux`. Obsidian styles all of those already, and so does every theme, so almost
+ * nothing needs saying here.
+ *
+ * What is left is the one thing the built-in has no equivalent of: a FOLDER row. The built-in offers only
+ * files, so it has never needed to mark a row as a folder, and the icon that does it is ours.
  */
 
 .alias-quick-switcher-modal.obsidian-dev-utils {
-  .alias-quick-switcher-modal__labels {
-    display: inline;
-  }
-
   .alias-quick-switcher-modal__icon {
     color: var(--text-muted);
     display: inline-flex;
@@ -16,15 +16,8 @@
     vertical-align: text-bottom;
   }
 
-  .alias-quick-switcher-modal__path {
-    color: var(--text-muted);
-    font-size: var(--font-smaller);
-    margin-top: 2px;
-  }
-
-  .suggestion-item svg {
+  .suggestion-title svg {
     height: var(--icon-s);
-    margin-right: var(--size-4-1);
     vertical-align: text-bottom;
     width: var(--icon-s);
   }

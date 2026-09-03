@@ -1,6 +1,6 @@
 {
   "name": "alias-quick-switcher",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Quick switcher that resolves aliases in every path segment, folder notes included.",
   "keywords": [],
   "homepage": "https://github.com/mnaoumov/obsidian-alias-quick-switcher#readme",

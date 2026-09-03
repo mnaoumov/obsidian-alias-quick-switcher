@@ -1,9 +1,31 @@
 /**
- * You can remove this file if you don't need any styles
- * See default library styles: https://github.com/mnaoumov/obsidian-dev-utils/blob/main/src/styles/main.scss
- * See available library css classes: https://github.com/mnaoumov/obsidian-dev-utils/blob/main/src/CssClass.ts
+ * The switcher's rows are two lines: the path AS MATCHED on top, and the real path underneath whenever the
+ * two differ. Without the second line a row reached through an alias is indistinguishable from one reached
+ * by name, which is the whole thing this plugin exists to show.
  */
 
-.alias-quick-switcher.obsidian-dev-utils {
-  /* Override library styles */
+.alias-quick-switcher-modal.obsidian-dev-utils {
+  .alias-quick-switcher-modal__labels {
+    display: inline;
+  }
+
+  .alias-quick-switcher-modal__icon {
+    color: var(--text-muted);
+    display: inline-flex;
+    margin-right: var(--size-4-1);
+    vertical-align: text-bottom;
+  }
+
+  .alias-quick-switcher-modal__path {
+    color: var(--text-muted);
+    font-size: var(--font-smaller);
+    margin-top: 2px;
+  }
+
+  .suggestion-item svg {
+    height: var(--icon-s);
+    margin-right: var(--size-4-1);
+    vertical-align: text-bottom;
+    width: var(--icon-s);
+  }
 }

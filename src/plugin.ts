@@ -6,6 +6,7 @@ import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
 import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
+import { LabelIndexComponent } from './label-index-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
@@ -28,11 +29,19 @@ export class Plugin extends PluginBase {
       })
     );
 
+    const labelIndexComponent = this.addChild(
+      new LabelIndexComponent({
+        app: this.app,
+        pluginSettingsComponent
+      })
+    );
+
     this.addChild(
       new AliasQuickSwitcherComponent({
         app: this.app,
         commandRegistrar: new PluginCommandRegistrar(this),
-        pluginNoticeComponent: this.pluginNoticeComponent
+        labelIndexComponent,
+        pluginSettingsComponent
       })
     );
 

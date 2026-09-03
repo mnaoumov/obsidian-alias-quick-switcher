@@ -1,13 +1,19 @@
 import type { App } from 'obsidian';
 import type { CommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
 import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
+
+import type { LabelIndexComponent } from './label-index-component.ts';
+import type { PluginSettings } from './plugin-settings.ts';
+
+import { AliasQuickSwitcherModal } from './alias-quick-switcher-modal.ts';
 
 interface AliasQuickSwitcherComponentConstructorParams {
   readonly app: App;
   readonly commandRegistrar: CommandRegistrar;
-  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly labelIndexComponent: LabelIndexComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponentBase<PluginSettings>;
 }
 
 /**
@@ -20,13 +26,15 @@ interface AliasQuickSwitcherComponentConstructorParams {
 export class AliasQuickSwitcherComponent extends ComponentEx {
   private readonly app: App;
   private readonly commandRegistrar: CommandRegistrar;
-  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly labelIndexComponent: LabelIndexComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponentBase<PluginSettings>;
 
   public constructor(params: AliasQuickSwitcherComponentConstructorParams) {
     super();
     this.app = params.app;
     this.commandRegistrar = params.commandRegistrar;
-    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.labelIndexComponent = params.labelIndexComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   public override onload(): void {
@@ -40,7 +48,15 @@ export class AliasQuickSwitcherComponent extends ComponentEx {
   }
 
   private openSwitcher(): void {
-    const markdownFileCount = this.app.vault.getMarkdownFiles().length;
-    this.pluginNoticeComponent.showNotice(`Alias quick switcher: ${String(markdownFileCount)} note(s) indexable`);
+    // Once per switcher session, never per keystroke: this is where the folder-note setup is re-read from
+    // The installed `folder-notes` plugin, so reconfiguring it takes effect here with nothing copied into
+    // This plugin's own settings.
+    this.labelIndexComponent.refresh();
+
+    new AliasQuickSwitcherModal({
+      app: this.app,
+      labelIndex: this.labelIndexComponent.labelIndex,
+      settings: this.pluginSettingsComponent.settings
+    }).open();
   }
 }

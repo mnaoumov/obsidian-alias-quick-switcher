@@ -3,6 +3,7 @@ import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugi
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
+import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
 import { PluginSettings } from './plugin-settings.ts';
 
@@ -26,5 +27,8 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
         return 'The recency tiebreak cannot be negative';
       }
     });
+    // An entry that is not a valid pattern does not throw when assigned — the whole list silently falls back to its
+    // Default pattern — so this validator is the only thing that tells the user their pattern is broken.
+    this.registerValidator('excludedPathPatterns', pathsValidator);
   }
 }

@@ -1,7 +1,11 @@
-import type { Command } from 'obsidian';
+import type {
+  App as AppOriginal,
+  Command
+} from 'obsidian';
 import type { CommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -13,33 +17,40 @@ import {
 } from 'vitest';
 
 import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
+import { AliasQuickSwitcherModal } from './alias-quick-switcher-modal.ts';
+import { LabelIndexComponent } from './label-index-component.ts';
+import { PluginSettings } from './plugin-settings.ts';
+
+/**
+ * What the strict `App` mock still has no member for; `resolveFolderNoteConfig` reads it to find the
+ * installed `folder-notes` plugin.
+ */
+interface PluginRegistryLike {
+  getPlugin: ReturnType<typeof vi.fn>;
+}
+
+interface PluginsMock {
+  plugins: PluginRegistryLike;
+}
+
+let app: AppOriginal;
+let commands: Command[];
+let labelIndexComponent: LabelIndexComponent;
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+  const appMock = App.createConfigured__({ files: { 'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n' } });
+  castTo<PluginsMock>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
+  app = appMock.asOriginalType__();
+  commands = [];
+  labelIndexComponent = new LabelIndexComponent({
+    app,
+    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings: new PluginSettings() })
+  });
+  labelIndexComponent.load();
+});
 
 describe('AliasQuickSwitcherComponent', () => {
-  let app: App;
-  let commands: Command[];
-  let showNoticeMock: PluginNoticeComponent['showNotice'];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    app = App.createConfigured__();
-    commands = [];
-    showNoticeMock = vi.fn<PluginNoticeComponent['showNotice']>();
-  });
-
-  function createComponent(): AliasQuickSwitcherComponent {
-    const component = new AliasQuickSwitcherComponent({
-      app: app.asOriginalType__(),
-      commandRegistrar: strictProxy<CommandRegistrar>({
-        addCommand: (command: Command) => {
-          commands.push(command);
-        }
-      }),
-      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: showNoticeMock })
-    });
-    component.load();
-    return component;
-  }
-
   /*
    * The command is the plugin's ONLY entry point, on purpose: the built-in switcher and its hotkey are
    * never patched, so a second registration here would be a takeover by the back door.
@@ -51,19 +62,47 @@ describe('AliasQuickSwitcherComponent', () => {
     expect(commands[0]?.name).toBe('Open quick switcher');
   });
 
-  it('should report how many notes are indexable when invoked', () => {
-    // `createSync__` rather than `TFile.create__`: the latter builds a `TFile` without registering it
-    // In the vault's index, so `getMarkdownFiles()` would still answer with an empty vault.
-    app.vault.createSync__('Alpha/Bravo/Charlie.md', '');
-    app.vault.createSync__('Zulu.md', '');
+  it('should open the switcher when the command is invoked', () => {
+    const openMock = vi.spyOn(AliasQuickSwitcherModal.prototype, 'open').mockReturnValue();
     createComponent();
 
     commands[0]?.callback?.();
-    expect(showNoticeMock).toHaveBeenCalledWith('Alias quick switcher: 2 note(s) indexable');
+
+    expect(openMock).toHaveBeenCalledOnce();
   });
 
-  it('should not report anything until the command is invoked', () => {
+  it('should not open anything until the command is invoked', () => {
+    const openMock = vi.spyOn(AliasQuickSwitcherModal.prototype, 'open').mockReturnValue();
     createComponent();
-    expect(showNoticeMock).not.toHaveBeenCalled();
+    expect(openMock).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Opening is the one moment the folder-note setup is re-read, so reconfiguring the `folder-notes` plugin
+   * takes effect without anything being copied into this plugin's settings.
+   */
+  it('should refresh the label index before the switcher reads it', () => {
+    const refreshMock = vi.spyOn(labelIndexComponent, 'refresh');
+    vi.spyOn(AliasQuickSwitcherModal.prototype, 'open').mockReturnValue();
+    createComponent();
+
+    commands[0]?.callback?.();
+
+    expect(refreshMock).toHaveBeenCalledOnce();
   });
 });
+
+function createComponent(): AliasQuickSwitcherComponent {
+  const component = new AliasQuickSwitcherComponent({
+    app,
+    commandRegistrar: strictProxy<CommandRegistrar>({
+      addCommand: (command: Command) => {
+        commands.push(command);
+      }
+    }),
+    labelIndexComponent,
+    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings: new PluginSettings() })
+  });
+  component.load();
+  return component;
+}

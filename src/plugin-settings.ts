@@ -1,9 +1,13 @@
+import { RankingMode } from './ranking.ts';
+import { SegmentMatchMode } from './segment-matcher.ts';
+
 export class PluginSettings {
   /**
    * Paths matching any of these are never offered as results. Matched against the whole vault-relative
-   * path, so a pattern can exclude a folder or a single note.
+   * path, so a pattern can exclude a folder or a single note. An entry wrapped in `/` is a regular
+   * expression; every other entry is a plain path.
    */
-  public excludedPathPatterns: readonly string[] = [];
+  public excludedPathPatterns: string[] = [];
 
   /**
    * An extra frontmatter property whose value is treated as a label alongside `aliases`, so a note or a
@@ -14,11 +18,25 @@ export class PluginSettings {
   public extraLabelPropertyName = '';
 
   /**
+   * Which order matching results are shown in.
+   *
+   * @default {@link RankingMode.Tiered}
+   */
+  public rankingMode: RankingMode = RankingMode.Tiered;
+
+  /**
    * How many recently-opened files rank above the rest when scores are otherwise tied. Zero turns the
    * recency tiebreak off entirely.
    */
   /* eslint-disable-next-line no-magic-numbers -- In plugin settings magic numbers are allowed. */
   public recentFilesBoostCount = 10;
+
+  /**
+   * How one segment of the query is tested against one name.
+   *
+   * @default {@link SegmentMatchMode.Substring}
+   */
+  public segmentMatchMode: SegmentMatchMode = SegmentMatchMode.Substring;
 
   /**
    * Whether folders themselves appear as results, opening their folder note when picked.

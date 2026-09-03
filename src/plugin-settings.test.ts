@@ -5,6 +5,8 @@ import {
 } from 'vitest';
 
 import { PluginSettings } from './plugin-settings.ts';
+import { RankingMode } from './ranking.ts';
+import { SegmentMatchMode } from './segment-matcher.ts';
 
 describe('PluginSettings', () => {
   /*
@@ -35,5 +37,21 @@ describe('PluginSettings', () => {
   it('should start with no exclusions', () => {
     const settings = new PluginSettings();
     expect(settings.excludedPathPatterns).toEqual([]);
+  });
+
+  /*
+   * Both algorithms are the user's to choose, but the DEFAULTS carry a promise: substring matching is
+   * predictable enough to run against a whole vault per keystroke, and tiered ranking is what keeps this
+   * switcher from reordering the results Obsidian's own already gives. A default that drifted would break
+   * that promise silently, so both are asserted here.
+   */
+  it('should match segments by substring by default', () => {
+    const settings = new PluginSettings();
+    expect(settings.segmentMatchMode).toBe(SegmentMatchMode.Substring);
+  });
+
+  it('should rank real names ahead of aliases by default', () => {
+    const settings = new PluginSettings();
+    expect(settings.rankingMode).toBe(RankingMode.Tiered);
   });
 });

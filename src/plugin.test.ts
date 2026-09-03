@@ -14,6 +14,7 @@ import {
 } from 'vitest';
 
 import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
+import { LabelIndexComponent } from './label-index-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
@@ -64,6 +65,13 @@ vi.mock('./plugin-settings-component.ts', () => ({
 
 vi.mock('./plugin-settings-tab.ts', () => ({
   PluginSettingsTab: vi.fn()
+}));
+
+vi.mock('./label-index-component.ts', () => ({
+  // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
+  LabelIndexComponent: vi.fn(function (): Component {
+    return new Component();
+  })
 }));
 
 vi.mock('./alias-quick-switcher-component.ts', () => ({
@@ -120,6 +128,7 @@ describe('Plugin', () => {
     expect(PluginSettingsComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
+    expect(LabelIndexComponent).toHaveBeenCalledOnce();
     expect(AliasQuickSwitcherComponent).toHaveBeenCalledOnce();
   });
 

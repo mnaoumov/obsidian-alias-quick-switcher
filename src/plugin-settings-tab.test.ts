@@ -36,7 +36,9 @@ interface BindOptionsExtension {
 const EXPECTED_BOUND_KEYS: (keyof PluginSettings)[] = [
   'excludedPathPatterns',
   'extraLabelPropertyName',
+  'rankingMode',
   'recentFilesBoostCount',
+  'segmentMatchMode',
   'shouldIncludeFolders',
   'shouldIncludeNonMarkdownFiles'
 ];

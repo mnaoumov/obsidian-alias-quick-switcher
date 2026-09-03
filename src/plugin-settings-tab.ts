@@ -1,8 +1,12 @@
 import type { SettingDefinitionItem } from 'obsidian';
 
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import type { PluginSettings } from './plugin-settings.ts';
+
+import { RankingMode } from './ranking.ts';
+import { SegmentMatchMode } from './segment-matcher.ts';
 
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   protected override getSettingDefinitionItems(): SettingDefinitionItem[] {
@@ -22,6 +26,52 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         render: (setting) => {
           setting.addText((text) => {
             this.bind({ propertyName: 'extraLabelPropertyName', valueComponent: text });
+          });
+        }
+      }),
+      this.settingEx({
+        desc: createFragment((f) => {
+          f.appendText('How one segment of your query is tested against one name.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Substring');
+          f.appendText(' - the typed text must appear inside the name as one unbroken run.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Fuzzy');
+          f.appendText(' - the typed characters must appear inside the name in order, the way Obsidian\'s own search works. Finds more, including things you did not mean.');
+        }),
+        name: 'Segment matching',
+        render: (setting) => {
+          setting.addDropdown((dropdown) => {
+            dropdown.addOptions({
+              /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+              [SegmentMatchMode.Substring]: 'Substring',
+              [SegmentMatchMode.Fuzzy]: 'Fuzzy'
+              /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+            });
+            this.bind({ propertyName: 'segmentMatchMode', valueComponent: dropdown });
+          });
+        }
+      }),
+      this.settingEx({
+        desc: createFragment((f) => {
+          f.appendText('Which order results are shown in.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Tiered');
+          f.appendText(' - real names before aliases, so this switcher never reshuffles the results Obsidian\'s own already gives you.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Link picker');
+          f.appendText(' - how well the query matched decides everything and an alias is just another name, the order Link Picker uses. Surfaces alias hits sooner, and gives up the guarantee above.');
+        }),
+        name: 'Ranking',
+        render: (setting) => {
+          setting.addDropdown((dropdown) => {
+            dropdown.addOptions({
+              /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+              [RankingMode.Tiered]: 'Tiered',
+              [RankingMode.LinkPicker]: 'Link picker'
+              /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+            });
+            this.bind({ propertyName: 'rankingMode', valueComponent: dropdown });
           });
         }
       }),

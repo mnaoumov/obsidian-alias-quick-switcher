@@ -18,3 +18,29 @@ export function runCommand(app: App, commandId: string): void {
 
   app.commands.executeCommandById(fullCommandId);
 }
+
+/**
+ * Sets one of the plugin's settings and saves it, so a note can demonstrate what a setting changes
+ * without sending the reader to the settings tab and back.
+ *
+ * Manual equivalent: Settings -> Community plugins -> Alias Quick Switcher, and the matching control.
+ */
+export async function setSetting(app: App, propertyName: string, value: unknown): Promise<void> {
+  const plugin = app.plugins.getPlugin(PLUGIN_ID);
+  if (!plugin) {
+    new Notice(`Plugin ${PLUGIN_ID} is not enabled`);
+    return;
+  }
+
+  const settingsComponent = (plugin as unknown as SettingsComponentHolder).pluginSettingsComponent;
+  await settingsComponent.editAndSave((settings: Record<string, unknown>) => {
+    settings[propertyName] = value;
+  });
+  new Notice(`${propertyName} is now ${String(value)}`);
+}
+
+interface SettingsComponentHolder {
+  pluginSettingsComponent: {
+    editAndSave(settingsEditor: (settings: Record<string, unknown>) => void): Promise<void>;
+  };
+}

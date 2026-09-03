@@ -19,15 +19,14 @@ const DEMO_VAULT_TEST_FILES = 'src/**/*.demo-vault.integration.test.ts';
  */
 const DEMO_VAULT_TIMEOUT_IN_MILLISECONDS = 600_000;
 
-/**
- * The performance suite's own files. The baseline project opens an EMPTY vault, which would measure
- * nothing here — the whole question is what a query costs across tens of thousands of notes — so the
- * project's `globalSetup` is overridden to one that populates the vault before Obsidian opens it.
- */
-const PERFORMANCE_TEST_FILES = 'src/**/*.desktop-performance.integration.test.ts';
-
 export const config = defineObsidianPluginVitestConfig({
   customProjects(context: ObsidianPluginVitestConfigContext): TestProjectConfiguration[] {
+    // The baseline `integration-tests:desktop-performance` project is declared for every plugin and opens
+    // An EMPTY vault, which would measure nothing here — the whole question is what a query costs across
+    // Tens of thousands of notes. So its setup is OVERRIDDEN in place; returning a second project of the
+    // Same name is rejected by vitest as a duplicate rather than treated as an override.
+    context.desktopPerformance.globalSetup = ['./scripts/vitest-global-setup-performance.ts'];
+
     return [
       {
         test: {
@@ -36,14 +35,6 @@ export const config = defineObsidianPluginVitestConfig({
           include: [DEMO_VAULT_TEST_FILES],
           name: 'integration-tests:demo-vault',
           testTimeout: DEMO_VAULT_TIMEOUT_IN_MILLISECONDS
-        }
-      },
-      {
-        test: {
-          ...context.desktopPerformance,
-          globalSetup: ['./scripts/vitest-global-setup-performance.ts'],
-          include: [PERFORMANCE_TEST_FILES],
-          name: 'integration-tests:desktop-performance'
         }
       }
     ];

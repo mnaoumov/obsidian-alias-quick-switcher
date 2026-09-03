@@ -53,6 +53,11 @@ const ALIASED_OUT_OF = 12;
 const TARGET_FOLDER_INDEX = 7;
 
 /**
+ * The folder holding the target note, named the way the generator names every folder.
+ */
+const TARGET_FOLDER_NAME = `dir-${String(TARGET_FOLDER_INDEX)}`;
+
+/**
  * Builds the file map for a vault at the scale the plugin was designed against, written to disk by
  * `TemporaryVault.populate()` before Obsidian opens it — so its startup scan indexes everything in one
  * pass, which is far faster and more reliable than writing notes after open and forcing a re-scan.
@@ -96,3 +101,14 @@ export function generatePerformanceVault(): PopulateFilesParams {
 function buildFrontmatter(alias: string): string {
   return `---\naliases:\n  - ${alias}\n---\n\nbody\n`;
 }
+
+/**
+ * The folder note whose alias makes the target folder reachable, so a test can wait for its frontmatter
+ * rather than hard-coding a path the generator owns.
+ */
+export const TARGET_FOLDER_NOTE_PATH = `${PERFORMANCE_VAULT_FOLDER}/${TARGET_FOLDER_NAME}/${TARGET_FOLDER_NAME}.md`;
+
+/**
+ * The target note itself.
+ */
+export const TARGET_NOTE_PATH = `${PERFORMANCE_VAULT_FOLDER}/${TARGET_FOLDER_NAME}/target.md`;

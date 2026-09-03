@@ -7,7 +7,9 @@ import {
 
 import {
   TARGET_FOLDER_ALIAS,
-  TARGET_NOTE_ALIAS
+  TARGET_FOLDER_NOTE_PATH,
+  TARGET_NOTE_ALIAS,
+  TARGET_NOTE_PATH
 } from '../scripts/helpers/generate-performance-vault.ts';
 
 /*
@@ -51,7 +53,7 @@ interface LatencyResult {
 describe('Per-keystroke latency at real scale', () => {
   it('answers a whole-vault alias query fast enough to type into', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, pluginId, targetFolderAlias, targetNoteAlias }): Promise<LatencyResult> {
+      async callback({ app, lib: { pressKey, waitUntil }, pluginId, targetFolderAlias, targetFolderNotePath, targetNoteAlias, targetNotePath }): Promise<LatencyResult> {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 300_000;
         const KEYSTROKE_COUNT = 9;
         const MIDDLE = 0.5;
@@ -60,6 +62,25 @@ describe('Per-keystroke latency at real scale', () => {
         await waitUntil({
           message: 'the generated vault is indexed',
           predicate: () => app.vault.getMarkdownFiles().length > MINIMUM_VAULT_SIZE,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+        });
+
+        // The file count says the vault is SCANNED; it says nothing about the frontmatter being parsed,
+        // And this query is answerable only through aliases. The candidate list is built once when the
+        // Switcher opens, so opening before the aliases land would memoize labels that lack them — and
+        // Measure a query that matches nothing rather than the one this plugin exists for.
+        await waitUntil({
+          message: 'the target aliases are in the metadata cache',
+          predicate: () => {
+            const folderNote = app.vault.getFileByPath(targetFolderNotePath);
+            const target = app.vault.getFileByPath(targetNotePath);
+            if (!folderNote || !target) {
+              return false;
+            }
+
+            return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+              && Boolean(app.metadataCache.getFileCache(target)?.frontmatter);
+          },
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
@@ -116,7 +137,13 @@ describe('Per-keystroke latency at real scale', () => {
           wasTargetFound
         };
       },
-      input: { pluginId: PLUGIN_ID, targetFolderAlias: TARGET_FOLDER_ALIAS, targetNoteAlias: TARGET_NOTE_ALIAS }
+      input: {
+        pluginId: PLUGIN_ID,
+        targetFolderAlias: TARGET_FOLDER_ALIAS,
+        targetFolderNotePath: TARGET_FOLDER_NOTE_PATH,
+        targetNoteAlias: TARGET_NOTE_ALIAS,
+        targetNotePath: TARGET_NOTE_PATH
+      }
     });
 
     // The measurements are not logged: a failing bound prints both sides, which is where the numbers

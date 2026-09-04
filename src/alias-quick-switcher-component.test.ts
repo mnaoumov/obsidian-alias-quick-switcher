@@ -5,7 +5,6 @@ import type {
 import type { CommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
 import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -25,14 +24,6 @@ import { PluginSettings } from './plugin-settings.ts';
  * What the strict `App` mock still has no member for; `resolveFolderNoteConfig` reads it to find the
  * installed `folder-notes` plugin.
  */
-interface PluginRegistryLike {
-  getPlugin: ReturnType<typeof vi.fn>;
-}
-
-interface PluginsMock {
-  plugins: PluginRegistryLike;
-}
-
 let app: AppOriginal;
 let commands: Command[];
 let labelIndexComponent: LabelIndexComponent;
@@ -40,7 +31,6 @@ let labelIndexComponent: LabelIndexComponent;
 beforeEach(() => {
   vi.restoreAllMocks();
   const appMock = App.createConfigured__({ files: { 'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n' } });
-  castTo<PluginsMock>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
   app = appMock.asOriginalType__();
   commands = [];
   labelIndexComponent = new LabelIndexComponent({

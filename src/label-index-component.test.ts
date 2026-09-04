@@ -12,8 +12,7 @@ import {
   beforeEach,
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
 import { LabelIndexComponent } from './label-index-component.ts';
@@ -30,14 +29,6 @@ const VAULT_FILES: Record<string, string> = {
  * read the installed `folder-notes` plugin's live settings, and answering `null` is what makes it fall back
  * to the default `Folder/Folder.md` layout this fixture is written in.
  */
-interface PluginRegistryLike {
-  getPlugin: ReturnType<typeof vi.fn>;
-}
-
-interface PluginsMock {
-  plugins: PluginRegistryLike;
-}
-
 let app: AppOriginal;
 let appMock: App;
 let component: LabelIndexComponent;
@@ -45,7 +36,6 @@ let settings: PluginSettings;
 
 beforeEach(() => {
   appMock = App.createConfigured__({ files: VAULT_FILES });
-  castTo<PluginsMock>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
   app = appMock.asOriginalType__();
   settings = new PluginSettings();
   component = new LabelIndexComponent({

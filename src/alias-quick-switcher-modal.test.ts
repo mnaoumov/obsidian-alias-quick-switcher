@@ -51,14 +51,6 @@ const VAULT_FILES: Record<string, string> = {
   'Diagram.canvas': '{}'
 };
 
-interface PluginRegistryLike {
-  getPlugin: ReturnType<typeof vi.fn>;
-}
-
-interface PluginsMock {
-  plugins: PluginRegistryLike;
-}
-
 interface RecentFileTrackerLike {
   lastOpenFiles: string[];
 }
@@ -80,7 +72,6 @@ beforeEach(async () => {
   vi.restoreAllMocks();
   const { App: AppMock } = await import('obsidian-test-mocks/obsidian');
   appMock = AppMock.createConfigured__({ files: VAULT_FILES });
-  castTo<PluginsMock>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
   app = appMock.asOriginalType__();
   castTo<RecentFileTrackerMock>(app).workspace.recentFileTracker = { lastOpenFiles: [] };
   openFileMock = vi.fn().mockResolvedValue(undefined);

@@ -135,17 +135,14 @@ describe('mobile frames of the matched row', () => {
  */
 async function openSwitcher(query: string): Promise<string[]> {
   return await evalInObsidian({
-    async callback({ app, lib: { waitUntil }, pluginId, query: currentQuery, waitTimeoutInMilliseconds }): Promise<string[]> {
+    async callback({ app, lib: { pressKey, waitUntil }, pluginId, query: currentQuery, waitTimeoutInMilliseconds }): Promise<string[]> {
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
 
       // Each shot leaves its switcher on screen — that is the point of the shot — so the next one has to
-      // Put it away before opening its own. Dismissed by clicking the modal background: the harness's
-      // Trusted-key helpers reach for Electron's `remote`, which Android has not got, and a dispatched
-      // KeyboardEvent is untrusted and ignored. A plain click is the one gesture that works here.
-      const background = document.querySelector('.modal-bg');
-      if (background instanceof HTMLElement) {
-        background.click();
-      }
+      // Put it away before opening its own. Escape rather than a tap on the modal background: a trusted
+      // Tap is hit-tested at the element's centre, and the background's centre is behind the switcher, so
+      // The tap would land on the switcher itself.
+      await pressKey({ key: 'Escape' });
 
       await waitUntil({
         message: 'no switcher left open',

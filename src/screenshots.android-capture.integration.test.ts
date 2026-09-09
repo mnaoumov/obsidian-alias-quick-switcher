@@ -15,7 +15,9 @@
  *
  * Split across several short `evalInObsidian` calls because one call is one `execute/sync`, which
  * WebDriver caps at 30 seconds — the wall this repo's eight cross-platform suites all hit on their first
- * Android run.
+ * Android run. The waiting itself happens in NODE for the same reason: the 60s ceiling this file used to
+ * declare inside a closure was one the cap could never honour, and the settles are Node-side sleeps now,
+ * since a settle is wall-clock time either way.
  *
  * Excluded from `npm run test:integration` by its file name — see the `capture-screenshots:android`
  * project in `scripts/vitest-config.ts`. Capturing is an explicit operation
@@ -28,10 +30,12 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
+import { setTimeout as sleepInNode } from 'node:timers/promises';
 import {
   captureObsidianScreenshot,
   evalInObsidian,
   labelScreenshot,
+  pollInObsidian,
   readPngDimensions
 } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
@@ -47,8 +51,13 @@ const PLUGIN_ID = 'alias-quick-switcher';
 const WIDTH_IN_PIXELS = 900;
 const HEIGHT_IN_PIXELS = 1600;
 
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 600_000;
+
+const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
+const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
@@ -64,34 +73,29 @@ beforeAll(async () => {
   });
   await vault.syncToDevice();
 
-  await evalInObsidian({
-    async callback({ app, lib: { waitUntil }, waitTimeoutInMilliseconds }): Promise<void> {
-      const SETTLE_DELAY_IN_MILLISECONDS = 1000;
+  // No sidebar to collapse, unlike the desktop suite: on a phone it is a drawer that is already closed,
+  // And the switcher is a full-screen modal over whatever is behind it.
+  await pollInObsidian({
+    poll({ app }): boolean {
+      const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
+      const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
+      if (!folderNote || !leaf) {
+        return false;
+      }
 
-      app.changeTheme('obsidian');
-
-      // No sidebar to collapse, unlike the desktop suite: on a phone it is a drawer that is already
-      // Closed, and the switcher is a full-screen modal over whatever is behind it.
-      await waitUntil({
-        message: 'both aliases are in the metadata cache',
-        predicate: () => {
-          const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
-          const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-          if (!folderNote || !leaf) {
-            return false;
-          }
-
-          return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
-            && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
-        },
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
-
-      await sleep(SETTLE_DELAY_IN_MILLISECONDS);
+      return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+        && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
-    input: { waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS },
+    start({ app }): void {
+      app.changeTheme('obsidian');
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'both aliases never reached the metadata cache',
+    until: (areCached: boolean): boolean => areCached,
     vaultPath: vaultPath()
   });
+
+  await sleepInNode(THEME_SETTLE_DELAY_IN_MILLISECONDS);
 }, TEST_TIMEOUT_IN_MILLISECONDS);
 
 describe('mobile frames of the matched row', () => {
@@ -134,48 +138,71 @@ describe('mobile frames of the matched row', () => {
  * @returns The text of the rows the switcher is showing.
  */
 async function openSwitcher(query: string): Promise<string[]> {
-  return await evalInObsidian({
-    async callback({ app, lib: { pressKey, waitUntil }, pluginId, query: currentQuery, waitTimeoutInMilliseconds }): Promise<string[]> {
-      const SETTLE_DELAY_IN_MILLISECONDS = 900;
-
+  await pollInObsidian({
+    input: { modalSelector: MODAL_SELECTOR },
+    poll({ modalSelector }): boolean {
+      return document.querySelector(modalSelector) === null;
+    },
+    async start({ lib: { pressKey } }): Promise<void> {
       // Each shot leaves its switcher on screen — that is the point of the shot — so the next one has to
       // Put it away before opening its own. Escape rather than a tap on the modal background: a trusted
       // Tap is hit-tested at the element's centre, and the background's centre is behind the switcher, so
       // The tap would land on the switcher itself.
       await pressKey({ key: 'Escape' });
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'a switcher was left open',
+    until: (isClosed: boolean): boolean => isClosed,
+    vaultPath: vaultPath()
+  });
 
-      await waitUntil({
-        message: 'no switcher left open',
-        predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
-
+  await pollInObsidian({
+    input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+    poll({ modalSelector }): boolean {
+      return document.querySelector(modalSelector) !== null;
+    },
+    start({ app, pluginId }): void {
       app.commands.executeCommandById(`${pluginId}:open`);
-      await waitUntil({
-        message: 'the switcher is open',
-        predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'the switcher never opened',
+    until: (isOpen: boolean): boolean => isOpen,
+    vaultPath: vaultPath()
+  });
 
-      const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+  await evalInObsidian({
+    callback({ modalSelector, query: currentQuery }): void {
+      const input = document.querySelector(`${modalSelector} .prompt-input`);
       if (!(input instanceof HTMLInputElement)) {
         throw new TypeError('The switcher has no input.');
       }
 
       input.value = currentQuery;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-
-      await waitUntil({
-        message: `a row is offered for ${currentQuery}`,
-        predicate: () => document.querySelector('.alias-quick-switcher-modal .suggestion-item') !== null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
-
-      await sleep(SETTLE_DELAY_IN_MILLISECONDS);
-
-      return [...document.querySelectorAll('.alias-quick-switcher-modal .suggestion-item')].map((el) => el.textContent);
     },
-    input: { pluginId: PLUGIN_ID, query, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS },
+    input: { modalSelector: MODAL_SELECTOR, query },
+    vaultPath: vaultPath()
+  });
+
+  await pollInObsidian({
+    input: { modalSelector: MODAL_SELECTOR },
+    poll({ modalSelector }): boolean {
+      return document.querySelector(`${modalSelector} .suggestion-item`) !== null;
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: `no row was ever offered for ${query}`,
+    until: (isOffered: boolean): boolean => isOffered,
+    vaultPath: vaultPath()
+  });
+
+  // The list has a row; this lets it finish rendering before the frame is taken.
+  await sleepInNode(ROW_SETTLE_DELAY_IN_MILLISECONDS);
+
+  return await evalInObsidian({
+    callback({ modalSelector }): string[] {
+      return [...document.querySelectorAll(`${modalSelector} .suggestion-item`)].map((el) => el.textContent);
+    },
+    input: { modalSelector: MODAL_SELECTOR },
     vaultPath: vaultPath()
   });
 }

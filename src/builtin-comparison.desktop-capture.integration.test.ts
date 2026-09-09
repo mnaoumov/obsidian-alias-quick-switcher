@@ -9,6 +9,10 @@
  * question about the row on its own; it is a question about whether it says more than the built-in
  * already does, and whether it says it in the same visual language.
  *
+ * The waiting happens in NODE: a single closure is capped at ~30s by the transport, and this file used to
+ * declare a 60s ceiling inside one — plus a settle on top of it — which the cap could never honour. The
+ * settles are Node-side sleeps now, since a settle is wall-clock time either way.
+ *
  * Excluded from `npm run test:integration` by its file name — see the `capture-screenshots:desktop`
  * project in `scripts/vitest-config.ts`.
  */
@@ -19,10 +23,12 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
+import { setTimeout as sleepInNode } from 'node:timers/promises';
 import {
   captureObsidianScreenshot,
   evalInObsidian,
   labelScreenshot,
+  pollInObsidian,
   readPngDimensions
 } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
@@ -43,6 +49,9 @@ const HEIGHT_IN_PIXELS = 520;
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
+const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
+const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
+
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
 beforeAll(async () => {
@@ -57,31 +66,26 @@ beforeAll(async () => {
   });
   await vault.syncToDevice();
 
-  await evalInObsidian({
-    async callback({ app, lib: { waitUntil }, waitTimeoutInMilliseconds }): Promise<void> {
-      const SETTLE_DELAY_IN_MILLISECONDS = 1000;
+  await pollInObsidian({
+    poll({ app }): boolean {
+      const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
+      if (!leaf) {
+        return false;
+      }
 
+      return Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
+    },
+    start({ app }): void {
       app.changeTheme('obsidian');
       app.workspace.leftSplit.collapse();
-
-      await waitUntil({
-        message: 'the leaf alias is in the metadata cache',
-        predicate: () => {
-          const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-          if (!leaf) {
-            return false;
-          }
-
-          return Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
-        },
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
-
-      await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },
-    input: { waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'the leaf alias never reached the metadata cache',
+    until: (isCached: boolean): boolean => isCached,
     vaultPath: vaultPath()
   });
+
+  await sleepInNode(THEME_SETTLE_DELAY_IN_MILLISECONDS);
 }, TEST_TIMEOUT_IN_MILLISECONDS);
 
 describe('the built-in switcher and this one, on the same match', () => {
@@ -116,28 +120,38 @@ describe('the built-in switcher and this one, on the same match', () => {
  * @returns The text of the rows it is showing.
  */
 async function openSwitcher(commandId: string, modalSelector: string, query: string): Promise<string[]> {
-  return await evalInObsidian({
-    async callback({ app, currentCommandId, currentModalSelector, lib: { waitUntil }, query: currentQuery, waitTimeoutInMilliseconds }): Promise<string[]> {
-      const SETTLE_DELAY_IN_MILLISECONDS = 900;
-
+  await pollInObsidian({
+    poll(): boolean {
+      return document.querySelector('.prompt') === null;
+    },
+    start(): void {
       const background = document.querySelector('.modal-bg');
       if (background instanceof HTMLElement) {
         background.click();
       }
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'a switcher was left open',
+    until: (isClosed: boolean): boolean => isClosed,
+    vaultPath: vaultPath()
+  });
 
-      await waitUntil({
-        message: 'no switcher left open',
-        predicate: () => document.querySelector('.prompt') === null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
-
+  await pollInObsidian({
+    input: { currentCommandId: commandId, currentModalSelector: modalSelector },
+    poll({ currentModalSelector }): boolean {
+      return document.querySelector(currentModalSelector) !== null;
+    },
+    start({ app, currentCommandId }): void {
       app.commands.executeCommandById(currentCommandId);
-      await waitUntil({
-        message: 'the switcher is open',
-        predicate: () => document.querySelector(currentModalSelector) !== null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: 'the switcher never opened',
+    until: (isOpen: boolean): boolean => isOpen,
+    vaultPath: vaultPath()
+  });
 
+  await evalInObsidian({
+    callback({ currentModalSelector, query: currentQuery }): void {
       const input = document.querySelector(`${currentModalSelector} .prompt-input`);
       if (!(input instanceof HTMLInputElement)) {
         throw new TypeError('The switcher has no input.');
@@ -145,23 +159,30 @@ async function openSwitcher(commandId: string, modalSelector: string, query: str
 
       input.value = currentQuery;
       input.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    input: { currentModalSelector: modalSelector, query },
+    vaultPath: vaultPath()
+  });
 
-      await waitUntil({
-        message: `a row is offered for ${currentQuery}`,
-        predicate: () => document.querySelector(`${currentModalSelector} .suggestion-item`) !== null,
-        timeoutInMilliseconds: waitTimeoutInMilliseconds
-      });
+  await pollInObsidian({
+    input: { currentModalSelector: modalSelector },
+    poll({ currentModalSelector }): boolean {
+      return document.querySelector(`${currentModalSelector} .suggestion-item`) !== null;
+    },
+    timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: `no row was ever offered for ${query}`,
+    until: (isOffered: boolean): boolean => isOffered,
+    vaultPath: vaultPath()
+  });
 
-      await sleep(SETTLE_DELAY_IN_MILLISECONDS);
+  // The list has a row; this lets it finish rendering before the frame is taken.
+  await sleepInNode(ROW_SETTLE_DELAY_IN_MILLISECONDS);
 
+  return await evalInObsidian({
+    callback({ currentModalSelector }): string[] {
       return [...document.querySelectorAll(`${currentModalSelector} .suggestion-item`)].map((el) => el.textContent);
     },
-    input: {
-      currentCommandId: commandId,
-      currentModalSelector: modalSelector,
-      query,
-      waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-    },
+    input: { currentModalSelector: modalSelector },
     vaultPath: vaultPath()
   });
 }

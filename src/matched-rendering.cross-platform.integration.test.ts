@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -11,10 +14,14 @@ import {
  * differ. Without it the user cannot tell why a row matched.
  *
  * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
- * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
+ * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
+ * from Node**, since a 60s budget declared inside a closure is one the cap can never honour.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
+
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
 
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -39,50 +46,55 @@ describe('The matched rendering', () => {
     const delta = `Delta-${stamp}`;
     const echo = `Echo-${stamp}`;
 
-    await evalInObsidian({
-      async callback({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName, delta: deltaAlias, echo: echoAlias, lib: { waitUntil }, waitTimeoutInMilliseconds }): Promise<void> {
-        const folderNotePath = `${alphaName}/${bravoName}/${bravoName}.md`;
-        const charliePath = `${alphaName}/${bravoName}/${charlieName}.md`;
+    await pollInObsidian({
+      input: { alpha, bravo, charlie, delta, echo },
+      poll({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName }): boolean {
+        const folderNote = app.vault.getFileByPath(`${alphaName}/${bravoName}/${bravoName}.md`);
+        const leaf = app.vault.getFileByPath(`${alphaName}/${bravoName}/${charlieName}.md`);
+        if (!folderNote || !leaf) {
+          return false;
+        }
 
-        await app.vault.createFolder(`${alphaName}/${bravoName}`);
-        await app.vault.create(folderNotePath, `---\naliases:\n  - ${deltaAlias}\n---\n`);
-        await app.vault.create(charliePath, `---\naliases:\n  - ${echoAlias}\n---\n`);
-
-        await waitUntil({
-          message: 'both aliases are in the metadata cache',
-          predicate: () => {
-            const folderNote = app.vault.getFileByPath(folderNotePath);
-            const leaf = app.vault.getFileByPath(charliePath);
-            if (!folderNote || !leaf) {
-              return false;
-            }
-
-            return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
-              && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
-          },
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+        return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+          && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
       },
-      input: { alpha, bravo, charlie, delta, echo, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      async start({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName, delta: deltaAlias, echo: echoAlias }): Promise<void> {
+        await app.vault.createFolder(`${alphaName}/${bravoName}`);
+        await app.vault.create(`${alphaName}/${bravoName}/${bravoName}.md`, `---\naliases:\n  - ${deltaAlias}\n---\n`);
+        await app.vault.create(`${alphaName}/${bravoName}/${charlieName}.md`, `---\naliases:\n  - ${echoAlias}\n---\n`);
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'both aliases never reached the metadata cache',
+      until: (areCached: boolean): boolean => areCached
     });
 
     async function readRow(query: string): Promise<RowRendering> {
-      return await evalInObsidian({
-        async callback({ app, lib: { waitUntil }, pluginId, query: currentQuery, targetName, waitTimeoutInMilliseconds }): Promise<RowRendering> {
-          await waitUntil({
-            message: 'no switcher left open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'a switcher was left open',
+        until: (isClosed: boolean): boolean => isClosed
+      });
 
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) !== null;
+        },
+        start({ app, pluginId }): void {
           app.commands.executeCommandById(`${pluginId}:open`);
-          await waitUntil({
-            message: 'the switcher is open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never opened',
+        until: (isOpen: boolean): boolean => isOpen
+      });
 
-          const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+      await evalInObsidian({
+        callback({ modalSelector, query: currentQuery }): void {
+          const input = document.querySelector(`${modalSelector} .prompt-input`);
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('The switcher has no input.');
           }
@@ -91,19 +103,30 @@ describe('The matched rendering', () => {
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        input: { modalSelector: MODAL_SELECTOR, query }
+      });
 
-          await waitUntil({
-            message: `a row is offered for ${currentQuery}`,
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(targetName)),
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+      await pollInObsidian({
+        input: { suggestionSelector: SUGGESTION_SELECTOR, targetName: charlie },
+        poll({ suggestionSelector, targetName }): boolean {
+          return [...document.querySelectorAll(suggestionSelector)].some((el) => el.textContent.includes(targetName));
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: `no row was ever offered for ${query}`,
+        until: (isOffered: boolean): boolean => isOffered
+      });
 
-          const row = [...document.querySelectorAll('.suggestion-item')].find((el) => el.textContent.includes(targetName));
+      // The whole rendering is read and the modal dismissed in one closure: reading it across separate
+      // Round trips would let a re-render change the row between the five reads.
+      const rendering = await evalInObsidian({
+        callback({ suggestionSelector, targetName }): RowRendering {
+          const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(targetName));
           if (!(row instanceof HTMLElement)) {
             throw new TypeError('No row was offered.');
           }
 
-          const rendering: RowRendering = {
+          const read: RowRendering = {
             hasAliasFlair: row.querySelector(':scope .suggestion-aux .suggestion-flair') !== null,
             hasSecondLine: row.querySelector('.suggestion-note') !== null,
             highlights: [...row.querySelectorAll('.suggestion-highlight')].map((el) => el.textContent),
@@ -119,16 +142,23 @@ describe('The matched rendering', () => {
           if (background instanceof HTMLElement) {
             background.click();
           }
-          await waitUntil({
-            message: 'the switcher closed',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
 
-          return rendering;
+          return read;
         },
-        input: { pluginId: PLUGIN_ID, query, targetName: charlie, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+        input: { suggestionSelector: SUGGESTION_SELECTOR, targetName: charlie }
       });
+
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never closed',
+        until: (isClosed: boolean): boolean => isClosed
+      });
+
+      return rendering;
     }
 
     const aliasRow = await readRow(`${alpha}/${delta}/${echo}`);

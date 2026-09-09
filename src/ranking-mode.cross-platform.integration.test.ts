@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -13,10 +16,14 @@ import {
  * it comes first.
  *
  * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
- * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
+ * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
+ * from Node**, since a 60s budget declared inside a closure is one the cap can never honour.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
+
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
 
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -33,40 +40,48 @@ describe('The ranking setting', () => {
     const realNameNote = `${query}Extra`;
     const aliasedNote = `Lima${stamp}`;
 
-    await evalInObsidian({
-      async callback({ aliasedNote: aliased, app, lib: { waitUntil }, query: aliasText, realNameNote: realName, waitTimeoutInMilliseconds }): Promise<void> {
+    await pollInObsidian({
+      input: { aliasedNote, query, realNameNote },
+      poll({ aliasedNote: aliased, app }): boolean {
+        const file = app.vault.getFileByPath(`${aliased}.md`);
+        return file !== null && Boolean(app.metadataCache.getFileCache(file)?.frontmatter);
+      },
+      async start({ aliasedNote: aliased, app, query: aliasText, realNameNote: realName }): Promise<void> {
         await app.vault.create(`${realName}.md`, 'body');
         await app.vault.create(`${aliased}.md`, `---\naliases:\n  - ${aliasText}\n---\n`);
-
-        await waitUntil({
-          message: 'the alias is in the metadata cache',
-          predicate: () => {
-            const file = app.vault.getFileByPath(`${aliased}.md`);
-            return file !== null && Boolean(app.metadataCache.getFileCache(file)?.frontmatter);
-          },
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
       },
-      input: { aliasedNote, query, realNameNote, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the alias never reached the metadata cache',
+      until: (isCached: boolean): boolean => isCached
     });
 
     async function readFirstRow(): Promise<string> {
-      return await evalInObsidian({
-        async callback({ aliasedNote: aliased, app, lib: { waitUntil }, pluginId, query: currentQuery, realNameNote: realName, waitTimeoutInMilliseconds }): Promise<string> {
-          await waitUntil({
-            message: 'no switcher left open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'a switcher was left open',
+        until: (isClosed: boolean): boolean => isClosed
+      });
 
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) !== null;
+        },
+        start({ app, pluginId }): void {
           app.commands.executeCommandById(`${pluginId}:open`);
-          await waitUntil({
-            message: 'the switcher is open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never opened',
+        until: (isOpen: boolean): boolean => isOpen
+      });
 
-          const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+      await evalInObsidian({
+        callback({ modalSelector, query: currentQuery }): void {
+          const input = document.querySelector(`${modalSelector} .prompt-input`);
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('The switcher has no input.');
           }
@@ -75,17 +90,26 @@ describe('The ranking setting', () => {
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        input: { modalSelector: MODAL_SELECTOR, query }
+      });
 
-          await waitUntil({
-            message: 'both notes are offered',
-            predicate: () => {
-              const rows = [...document.querySelectorAll('.suggestion-item')];
-              return rows.some((el) => el.textContent.includes(realName)) && rows.some((el) => el.textContent.includes(aliased));
-            },
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+      await pollInObsidian({
+        input: { aliasedNote, realNameNote, suggestionSelector: SUGGESTION_SELECTOR },
+        poll({ aliasedNote: aliased, realNameNote: realName, suggestionSelector }): boolean {
+          const rows = [...document.querySelectorAll(suggestionSelector)];
+          return rows.some((el) => el.textContent.includes(realName)) && rows.some((el) => el.textContent.includes(aliased));
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'both notes were never offered together',
+        until: (areBothOffered: boolean): boolean => areBothOffered
+      });
 
-          const firstRowText = document.querySelector('.suggestion-item')?.textContent ?? '';
+      // The row is read and the modal dismissed in one closure: both are instantaneous, and reading the
+      // Row after a separate round trip would let a re-render reorder the list under the assertion.
+      const firstRowText = await evalInObsidian({
+        callback({ suggestionSelector }): string {
+          const text = document.querySelector(suggestionSelector)?.textContent ?? '';
 
           // Closed by clicking the modal background rather than by pressing Escape: the harness's
           // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
@@ -95,16 +119,23 @@ describe('The ranking setting', () => {
           if (background instanceof HTMLElement) {
             background.click();
           }
-          await waitUntil({
-            message: 'the switcher closed',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
 
-          return firstRowText;
+          return text;
         },
-        input: { aliasedNote, pluginId: PLUGIN_ID, query, realNameNote, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+        input: { suggestionSelector: SUGGESTION_SELECTOR }
       });
+
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never closed',
+        until: (isClosed: boolean): boolean => isClosed
+      });
+
+      return firstRowText;
     }
 
     async function setRankingMode(mode: string): Promise<void> {

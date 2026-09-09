@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -21,13 +24,35 @@ import {
  * The last two matter — 42% is why "only scan aliased notes" is not a useful pre-filter, and 9% is why the
  * segment walk usually does not branch.
  *
+ * **The waiting for that vault to index happens in NODE.** Indexing 36,000 notes is minutes of work on a
+ * cold machine, and the transport kills any single closure at ~30s — so the old shape, which awaited it
+ * inside one closure under a 300s ceiling, declared a budget the cap could never honour and would have
+ * died on exactly the slow machine the budget was for. Only the measurement itself is one closure now,
+ * because a round trip between two `performance.now()` calls would be measuring the harness.
+ *
  * Reachable ONLY via `npm run test:integration:desktop:performance`; never from a routine
  * `npm run test:integration` (G51).
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
+
 const TEST_TIMEOUT_IN_MILLISECONDS = 600_000;
+
+/**
+ * The Node-side budget for the generated vault to finish indexing. Long because it is genuinely minutes of
+ * work; safe to be long because Node does the waiting, one short poll at a time.
+ */
+const INDEX_TIMEOUT_IN_MILLISECONDS = 300_000;
+
+/**
+ * The in-closure ceiling on the modal appearing, kept far below the transport's ~30s cap. The assertion
+ * below fails anything over {@link OPEN_BUDGET_IN_MILLISECONDS} anyway, so this only has to be generous
+ * enough that a slow machine reports a real number rather than a timeout.
+ */
+const OPEN_WAIT_TIMEOUT_IN_MILLISECONDS = 10_000;
 
 /**
  * The budget for one keystroke over the whole vault. Obsidian's own switcher does a full fuzzy scan of
@@ -42,6 +67,8 @@ const KEYSTROKE_BUDGET_IN_MILLISECONDS = 250;
  */
 const OPEN_BUDGET_IN_MILLISECONDS = 2000;
 
+const MINIMUM_VAULT_SIZE = 1000;
+
 interface LatencyResult {
   readonly candidateCount: number;
   readonly maxKeystrokeInMilliseconds: number;
@@ -52,43 +79,64 @@ interface LatencyResult {
 
 describe('Per-keystroke latency at real scale', () => {
   it('answers a whole-vault alias query fast enough to type into', async () => {
+    await pollInObsidian({
+      poll({ app }): number {
+        return app.vault.getMarkdownFiles().length;
+      },
+      timeoutInMilliseconds: INDEX_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the generated vault never finished indexing',
+      until: (fileCount: number): boolean => fileCount > MINIMUM_VAULT_SIZE
+    });
+
+    /*
+     * The file count says the vault is SCANNED; it says nothing about the frontmatter being parsed, and
+     * this query is answerable only through aliases. The candidate list is built once when the switcher
+     * opens, so opening before the aliases land would memoize labels that lack them — and measure a query
+     * that matches nothing rather than the one this plugin exists for.
+     */
+    await pollInObsidian({
+      input: { targetFolderNotePath: TARGET_FOLDER_NOTE_PATH, targetNotePath: TARGET_NOTE_PATH },
+      poll({ app, targetFolderNotePath, targetNotePath }): boolean {
+        const folderNote = app.vault.getFileByPath(targetFolderNotePath);
+        const target = app.vault.getFileByPath(targetNotePath);
+        if (!folderNote || !target) {
+          return false;
+        }
+
+        return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+          && Boolean(app.metadataCache.getFileCache(target)?.frontmatter);
+      },
+      timeoutInMilliseconds: INDEX_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the target aliases never reached the metadata cache',
+      until: (areCached: boolean): boolean => areCached
+    });
+
+    await pollInObsidian({
+      input: { modalSelector: MODAL_SELECTOR },
+      poll({ modalSelector }): boolean {
+        return document.querySelector(modalSelector) === null;
+      },
+      timeoutInMilliseconds: INDEX_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'a switcher was left open',
+      until: (isClosed: boolean): boolean => isClosed
+    });
+
+    // Everything below is ONE closure on purpose: it is the measurement, and a transport round trip between
+    // Two `performance.now()` calls would be timing the harness rather than the plugin. Its only wait is
+    // The bounded open ceiling, which keeps the whole closure far inside the cap.
     const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, pluginId, targetFolderAlias, targetFolderNotePath, targetNoteAlias, targetNotePath }): Promise<LatencyResult> {
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 300_000;
+      async callback({
+        app,
+        lib: { pressKey, waitUntil },
+        modalSelector,
+        openWaitTimeoutInMilliseconds,
+        pluginId,
+        suggestionSelector,
+        targetFolderAlias,
+        targetNoteAlias
+      }): Promise<LatencyResult> {
         const KEYSTROKE_COUNT = 9;
         const MIDDLE = 0.5;
-        const MINIMUM_VAULT_SIZE = 1000;
-
-        await waitUntil({
-          message: 'the generated vault is indexed',
-          predicate: () => app.vault.getMarkdownFiles().length > MINIMUM_VAULT_SIZE,
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-        });
-
-        // The file count says the vault is SCANNED; it says nothing about the frontmatter being parsed,
-        // And this query is answerable only through aliases. The candidate list is built once when the
-        // Switcher opens, so opening before the aliases land would memoize labels that lack them — and
-        // Measure a query that matches nothing rather than the one this plugin exists for.
-        await waitUntil({
-          message: 'the target aliases are in the metadata cache',
-          predicate: () => {
-            const folderNote = app.vault.getFileByPath(targetFolderNotePath);
-            const target = app.vault.getFileByPath(targetNotePath);
-            if (!folderNote || !target) {
-              return false;
-            }
-
-            return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
-              && Boolean(app.metadataCache.getFileCache(target)?.frontmatter);
-          },
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-        });
-
-        await waitUntil({
-          message: 'no switcher left open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-        });
 
         // Opening is where the candidate list is built and the folder-note setup re-resolved, so it is
         // Timed separately rather than folded into the first keystroke.
@@ -96,12 +144,12 @@ describe('Per-keystroke latency at real scale', () => {
         app.commands.executeCommandById(`${pluginId}:open`);
         await waitUntil({
           message: 'the switcher is open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          predicate: () => document.querySelector(modalSelector) !== null,
+          timeoutInMilliseconds: openWaitTimeoutInMilliseconds
         });
         const openInMilliseconds = performance.now() - openStart;
 
-        const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+        const input = document.querySelector(`${modalSelector} .prompt-input`);
         if (!(input instanceof HTMLInputElement)) {
           throw new TypeError('The switcher has no input.');
         }
@@ -120,7 +168,7 @@ describe('Per-keystroke latency at real scale', () => {
           durations.push(performance.now() - start);
         }
 
-        const wasTargetFound = [...document.querySelectorAll('.suggestion-item')]
+        const wasTargetFound = [...document.querySelectorAll(suggestionSelector)]
           .some((el) => el.textContent.includes(targetNoteAlias));
         const candidateCount = app.vault.getMarkdownFiles().length;
 
@@ -138,11 +186,12 @@ describe('Per-keystroke latency at real scale', () => {
         };
       },
       input: {
+        modalSelector: MODAL_SELECTOR,
+        openWaitTimeoutInMilliseconds: OPEN_WAIT_TIMEOUT_IN_MILLISECONDS,
         pluginId: PLUGIN_ID,
+        suggestionSelector: SUGGESTION_SELECTOR,
         targetFolderAlias: TARGET_FOLDER_ALIAS,
-        targetFolderNotePath: TARGET_FOLDER_NOTE_PATH,
-        targetNoteAlias: TARGET_NOTE_ALIAS,
-        targetNotePath: TARGET_NOTE_PATH
+        targetNoteAlias: TARGET_NOTE_ALIAS
       }
     });
 
@@ -152,7 +201,7 @@ describe('Per-keystroke latency at real scale', () => {
     // The query is one no other switcher can answer, so finding the note is itself part of the measurement:
     // A fast run that found nothing would be measuring the pre-filter rejecting everything.
     expect(result.wasTargetFound).toBe(true);
-    expect(result.candidateCount).toBeGreaterThan(1000);
+    expect(result.candidateCount).toBeGreaterThan(MINIMUM_VAULT_SIZE);
     expect(result.medianKeystrokeInMilliseconds).toBeLessThan(KEYSTROKE_BUDGET_IN_MILLISECONDS);
     expect(result.maxKeystrokeInMilliseconds).toBeLessThan(KEYSTROKE_BUDGET_IN_MILLISECONDS);
     expect(result.openInMilliseconds).toBeLessThan(OPEN_BUDGET_IN_MILLISECONDS);

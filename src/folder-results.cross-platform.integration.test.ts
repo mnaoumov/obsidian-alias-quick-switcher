@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -12,10 +15,15 @@ import {
  * folder note is never offered, and resolving one never creates it.
  *
  * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
- * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
+ * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
+ * from Node**, since a 60s budget declared inside a closure is one the cap can never honour.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
+
+const FOLDER_ROW_CLASS = 'alias-quick-switcher-modal__folder';
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
 
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -30,11 +38,6 @@ interface BareFolderResult {
   readonly wasFolderNoteCreated: boolean;
 }
 
-interface FolderPickResult {
-  readonly openedPath: string;
-  readonly wasFolderRowOffered: boolean;
-}
-
 describe('Folders as results', () => {
   it('offers a folder by its folder note alias and opens that note, while never offering a folder without one', async () => {
     const stamp = `${Date.now().toString()}-${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
@@ -43,112 +46,129 @@ describe('Folders as results', () => {
     const delta = `Delta-${stamp}`;
     const folderNotePath = `${noted}/${noted}.md`;
 
-    await evalInObsidian({
-      async callback({ app, bare: bareFolder, delta: deltaAlias, lib: { waitUntil }, noted: notedFolder, waitTimeoutInMilliseconds }): Promise<void> {
-        const notePath = `${notedFolder}/${notedFolder}.md`;
-
+    await pollInObsidian({
+      input: { bare, delta, noted },
+      poll({ app, noted: notedFolder }): boolean {
+        const folderNote = app.vault.getFileByPath(`${notedFolder}/${notedFolder}.md`);
+        return folderNote !== null && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter);
+      },
+      async start({ app, bare: bareFolder, delta: deltaAlias, noted: notedFolder }): Promise<void> {
         await app.vault.createFolder(notedFolder);
         await app.vault.createFolder(bareFolder);
-        await app.vault.create(notePath, `---\naliases:\n  - ${deltaAlias}\n---\n`);
+        await app.vault.create(`${notedFolder}/${notedFolder}.md`, `---\naliases:\n  - ${deltaAlias}\n---\n`);
         // A note INSIDE the bare folder, so the folder exists in the vault for real and is genuinely
         // Declined for having no folder note rather than for being empty.
         await app.vault.create(`${bareFolder}/Inside-${bareFolder}.md`, 'inside');
-
-        await waitUntil({
-          message: 'the folder note alias is in the metadata cache',
-          predicate: () => {
-            const folderNote = app.vault.getFileByPath(notePath);
-            return folderNote !== null && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter);
-          },
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
       },
-      input: { bare, delta, noted, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the folder note alias never reached the metadata cache',
+      until: (isCached: boolean): boolean => isCached
     });
 
-    const pick = await evalInObsidian({
-      async callback({ app, delta: deltaAlias, folderNotePath: notePath, lib: { waitUntil }, pluginId, waitTimeoutInMilliseconds }): Promise<FolderPickResult> {
-        await waitUntil({
-          message: 'no switcher left open by an earlier suite',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+    async function openEmptySwitcher(): Promise<void> {
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'a switcher was left open',
+        until: (isClosed: boolean): boolean => isClosed
+      });
 
-        app.commands.executeCommandById(`${pluginId}:open`);
-        await waitUntil({
-          message: 'the switcher is open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) !== null;
+        },
+        start({ app, pluginId }): void {
+          app.commands.executeCommandById(`${pluginId}:open`);
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never opened',
+        until: (isOpen: boolean): boolean => isOpen
+      });
+    }
 
-        const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
-        if (!(input instanceof HTMLInputElement)) {
-          throw new TypeError('The switcher has no input.');
-        }
+    async function typeQuery(query: string): Promise<void> {
+      await evalInObsidian({
+        callback({ modalSelector, query: currentQuery }): void {
+          const input = document.querySelector(`${modalSelector} .prompt-input`);
+          if (!(input instanceof HTMLInputElement)) {
+            throw new TypeError('The switcher has no input.');
+          }
 
-        // A dispatched event rather than trusted input (G107): the harness drives keys through Electron's
-        // Input API, which does not exist on Android, and this has to be proven on both.
-        input.value = deltaAlias;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
+          // A dispatched event rather than trusted input (G107): the harness drives keys through Electron's
+          // Input API, which does not exist on Android, and this has to be proven on both.
+          input.value = currentQuery;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        input: { modalSelector: MODAL_SELECTOR, query }
+      });
+    }
 
-        await waitUntil({
-          message: 'the folder is offered by its alias',
-          predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(deltaAlias)),
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+    await openEmptySwitcher();
+    await typeQuery(delta);
 
-        const folderRow = [...document.querySelectorAll('.suggestion-item')].find((el) => el.textContent.includes(deltaAlias));
+    await pollInObsidian({
+      input: { delta, suggestionSelector: SUGGESTION_SELECTOR },
+      poll({ delta: deltaAlias, suggestionSelector }): boolean {
+        return [...document.querySelectorAll(suggestionSelector)].some((el) => el.textContent.includes(deltaAlias));
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the folder was never offered by its alias',
+      until: (isOffered: boolean): boolean => isOffered
+    });
+
+    // The row is read and clicked in one closure: reading its class after a separate round trip would let
+    // A re-render replace the element between the read and the click.
+    const wasFolderRowOffered = await evalInObsidian({
+      callback({ delta: deltaAlias, folderRowClass, suggestionSelector }): boolean {
+        const folderRow = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(deltaAlias));
         if (!(folderRow instanceof HTMLElement)) {
           throw new TypeError('The folder was not offered.');
         }
 
-        const wasFolderRowOffered = folderRow.hasClass('alias-quick-switcher-modal__folder');
+        const isFolderRow = folderRow.hasClass(folderRowClass);
         folderRow.click();
 
-        await waitUntil({
-          message: 'the folder note is open',
-          predicate: () => app.workspace.getActiveFile()?.path === notePath,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
-
-        return { openedPath: app.workspace.getActiveFile()?.path ?? '', wasFolderRowOffered };
+        return isFolderRow;
       },
-      input: { delta, folderNotePath, pluginId: PLUGIN_ID, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      input: { delta, folderRowClass: FOLDER_ROW_CLASS, suggestionSelector: SUGGESTION_SELECTOR }
     });
 
+    // `until` runs in Node, so it compares against the path this test already holds.
+    const openedPath = await pollInObsidian({
+      poll({ app }): string {
+        return app.workspace.getActiveFile()?.path ?? '';
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the folder note never became the active file',
+      until: (path: string): boolean => path === folderNotePath
+    });
+
+    await openEmptySwitcher();
+    await typeQuery(bare);
+
+    await pollInObsidian({
+      input: { bare, suggestionSelector: SUGGESTION_SELECTOR },
+      poll({ bare: bareFolder, suggestionSelector }): boolean {
+        return [...document.querySelectorAll(suggestionSelector)].some((el) => el.textContent.includes(`Inside-${bareFolder}`));
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the note inside the bare folder was never offered, so the list never settled',
+      until: (hasSettled: boolean): boolean => hasSettled
+    });
+
+    // The settle stays INSIDE the closure: the assertion is about a row being ABSENT, and polling for an
+    // Absence that is already true would accept before the folder row had a chance to appear.
     const bareFolderResult = await evalInObsidian({
-      async callback({ app, bare: bareFolder, lib: { waitUntil }, pluginId, settleDelayInMilliseconds, waitTimeoutInMilliseconds }): Promise<BareFolderResult> {
-        await waitUntil({
-          message: 'no switcher left open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
-
-        app.commands.executeCommandById(`${pluginId}:open`);
-        await waitUntil({
-          message: 'the switcher is open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
-
-        const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
-        if (!(input instanceof HTMLInputElement)) {
-          throw new TypeError('The switcher has no input.');
-        }
-
-        input.value = bareFolder;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-
-        await waitUntil({
-          message: 'the note inside the bare folder is offered, so the list has settled',
-          predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(`Inside-${bareFolder}`)),
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+      async callback({ app, bare: bareFolder, folderRowClass, settleDelayInMilliseconds, suggestionSelector }): Promise<BareFolderResult> {
         await sleep(settleDelayInMilliseconds);
 
         // The FOLDER itself must not be among the rows — only the note inside it.
-        const wasBareFolderOffered = [...document.querySelectorAll('.suggestion-item')]
-          .some((el) => el.hasClass('alias-quick-switcher-modal__folder'));
+        const wasBareFolderOffered = [...document.querySelectorAll(suggestionSelector)]
+          .some((el) => el.hasClass(folderRowClass));
 
         // Closed by clicking the modal background rather than by pressing Escape: the harness's
         // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
@@ -158,11 +178,6 @@ describe('Folders as results', () => {
         if (background instanceof HTMLElement) {
           background.click();
         }
-        await waitUntil({
-          message: 'the switcher closed',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
 
         return {
           wasBareFolderOffered,
@@ -172,14 +187,24 @@ describe('Folders as results', () => {
       },
       input: {
         bare,
-        pluginId: PLUGIN_ID,
+        folderRowClass: FOLDER_ROW_CLASS,
         settleDelayInMilliseconds: SETTLE_DELAY_IN_MILLISECONDS,
-        waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+        suggestionSelector: SUGGESTION_SELECTOR
       }
     });
 
-    expect(pick.wasFolderRowOffered).toBe(true);
-    expect(pick.openedPath).toBe(folderNotePath);
+    await pollInObsidian({
+      input: { modalSelector: MODAL_SELECTOR },
+      poll({ modalSelector }): boolean {
+        return document.querySelector(modalSelector) === null;
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the switcher never closed',
+      until: (isClosed: boolean): boolean => isClosed
+    });
+
+    expect(wasFolderRowOffered).toBe(true);
+    expect(openedPath).toBe(folderNotePath);
     expect(bareFolderResult.wasBareFolderOffered).toBe(false);
     expect(bareFolderResult.wasFolderNoteCreated).toBe(false);
   }, TEST_TIMEOUT_IN_MILLISECONDS);

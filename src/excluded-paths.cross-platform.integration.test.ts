@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -10,10 +13,15 @@ import {
  * never offered, and the setting takes effect on the next open with no reload.
  *
  * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
- * `evalInObsidian` is one `execute/sync`, which WebDriver caps at 30 seconds.
+ * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
+ * from Node** for the same reason: a 60s budget declared inside a closure is one the cap can never
+ * honour, so `pollInObsidian` re-runs a short closure until the Node-side `until` accepts.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
+
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
 
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -29,36 +37,53 @@ describe('The excluded paths setting', () => {
     const archive = `Archive-${stamp}`;
     const noteName = `Old-${stamp}`;
 
-    await evalInObsidian({
-      async callback({ app, archive: archiveFolder, lib: { waitUntil }, noteName: name, waitTimeoutInMilliseconds }): Promise<void> {
+    await pollInObsidian({
+      input: { archive, noteName },
+      poll({ app, archive: archiveFolder, noteName: name }): boolean {
+        return app.vault.getFileByPath(`${archiveFolder}/${name}.md`) !== null;
+      },
+      async start({ app, archive: archiveFolder, noteName: name }): Promise<void> {
         await app.vault.createFolder(archiveFolder);
         await app.vault.create(`${archiveFolder}/${name}.md`, 'archived');
-        await waitUntil({
-          message: 'the note is in the vault',
-          predicate: () => app.vault.getFileByPath(`${archiveFolder}/${name}.md`) !== null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
       },
-      input: { archive, noteName, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the note never appeared in the vault',
+      until: (isPresent: boolean): boolean => isPresent
     });
 
     async function checkIsOffered(): Promise<boolean> {
-      return await evalInObsidian({
-        async callback({ app, lib: { waitUntil }, noteName: name, pluginId, settleDelayInMilliseconds, waitTimeoutInMilliseconds }): Promise<boolean> {
-          await waitUntil({
-            message: 'no switcher left open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'a switcher was left open',
+        until: (isClosed: boolean): boolean => isClosed
+      });
 
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) !== null;
+        },
+        start({ app, pluginId }): void {
           app.commands.executeCommandById(`${pluginId}:open`);
-          await waitUntil({
-            message: 'the switcher is open',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
+        },
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never opened',
+        until: (isOpen: boolean): boolean => isOpen
+      });
 
-          const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+      /*
+       * The settle stays INSIDE the closure, and is the one wait that has to: one of the two assertions is
+       * about a row being ABSENT, and polling for an absence that is already true would accept instantly
+       * whether or not the list had rendered yet. At 500ms it is nowhere near the cap; what made the old
+       * shape unsafe was this settle sharing one budget with four 60s waits.
+       */
+      const isOffered = await evalInObsidian({
+        async callback({ modalSelector, noteName: name, settleDelayInMilliseconds, suggestionSelector }): Promise<boolean> {
+          const input = document.querySelector(`${modalSelector} .prompt-input`);
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('The switcher has no input.');
           }
@@ -68,12 +93,24 @@ describe('The excluded paths setting', () => {
           input.value = name;
           input.dispatchEvent(new Event('input', { bubbles: true }));
 
-          // A settle rather than a `waitUntil`: one of the two assertions is about a row being ABSENT, and
-          // Waiting for an absence that is already true would pass instantly whether or not the list had
-          // Been rendered yet.
           await sleep(settleDelayInMilliseconds);
-          const isOffered = [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(name));
 
+          return [...document.querySelectorAll(suggestionSelector)].some((el) => el.textContent.includes(name));
+        },
+        input: {
+          modalSelector: MODAL_SELECTOR,
+          noteName,
+          settleDelayInMilliseconds: SETTLE_DELAY_IN_MILLISECONDS,
+          suggestionSelector: SUGGESTION_SELECTOR
+        }
+      });
+
+      await pollInObsidian({
+        input: { modalSelector: MODAL_SELECTOR },
+        poll({ modalSelector }): boolean {
+          return document.querySelector(modalSelector) === null;
+        },
+        start(): void {
           // Closed by clicking the modal background rather than by pressing Escape: the harness's
           // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
           // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
@@ -82,21 +119,13 @@ describe('The excluded paths setting', () => {
           if (background instanceof HTMLElement) {
             background.click();
           }
-          await waitUntil({
-            message: 'the switcher closed',
-            predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-            timeoutInMilliseconds: waitTimeoutInMilliseconds
-          });
-
-          return isOffered;
         },
-        input: {
-          noteName,
-          pluginId: PLUGIN_ID,
-          settleDelayInMilliseconds: SETTLE_DELAY_IN_MILLISECONDS,
-          waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-        }
+        timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the switcher never closed',
+        until: (isClosed: boolean): boolean => isClosed
       });
+
+      return isOffered;
     }
 
     async function setExcludedPaths(patterns: string[]): Promise<void> {

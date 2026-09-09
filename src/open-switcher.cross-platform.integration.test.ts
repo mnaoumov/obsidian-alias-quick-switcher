@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import {
   describe,
   expect,
@@ -12,14 +15,19 @@ import {
  * Cross-platform: the manifest declares `isDesktopOnly: false`, and opening a note has to hold on a phone
  * as much as on a desktop, so the file name puts it in both projects (G47).
  *
- * **The flow is split across several `evalInObsidian` calls on purpose.** Each call is ONE
- * `execute/sync` over the Appium transport, and WebDriver caps a single script at 30 seconds — which a
- * cold phone blows through while a whole create-wait-open-type-pick flow is still in its first half. The
- * stamp is therefore computed out here and passed in, so every call can re-derive the same paths without
- * carrying state across the boundary.
+ * **The waiting happens in NODE, and each closure below is milliseconds of DOM reading.** A single
+ * `evalInObsidian` closure is capped at ~30s by the transport, so a closure that waits is a closure that
+ * dies on any machine where the thing waited for is slower than that — a cold phone, exactly. This file
+ * used to split the flow across calls for that reason and then declare a 60s ceiling inside each of them,
+ * which the cap could never honour. `pollInObsidian` is what makes the 60s real: it re-runs a short `poll`
+ * closure from Node until the Node-side `until` accepts. The stamp is computed out here and passed in, so
+ * every call re-derives the same paths without carrying state across the boundary.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
+
+const MODAL_SELECTOR = '.alias-quick-switcher-modal';
+const SUGGESTION_SELECTOR = '.suggestion-item';
 
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -31,43 +39,47 @@ describe('The `Open quick switcher` command', () => {
     const targetName = `Charlie-${stamp}`;
     const targetPath = `${targetName}.md`;
 
-    await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, targetPath: path, waitTimeoutInMilliseconds }): Promise<void> {
+    await pollInObsidian({
+      input: { targetPath },
+      poll({ app, targetPath: path }): boolean {
+        return app.vault.getFileByPath(path) !== null;
+      },
+      async start({ app, targetPath: path }): Promise<void> {
         await app.vault.create(path, '# Charlie\n');
-        await waitUntil({
-          message: 'the new note is in the vault',
-          predicate: () => app.vault.getFileByPath(path) !== null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
       },
-      input: { targetPath, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the new note never appeared in the vault',
+      until: (isPresent: boolean): boolean => isPresent
     });
 
-    const wasSwitcherOpened = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, pluginId, waitTimeoutInMilliseconds }): Promise<boolean> {
-        // These suites share one Obsidian, and each ends by picking something rather than by walking away,
-        // So a modal left open here means an earlier suite broke that contract.
-        await waitUntil({
-          message: 'no switcher left open by an earlier suite',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') === null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+    // These suites share one Obsidian, and each ends by picking something rather than by walking away,
+    // So a modal left open here means an earlier suite broke that contract.
+    await pollInObsidian({
+      input: { modalSelector: MODAL_SELECTOR },
+      poll({ modalSelector }): boolean {
+        return document.querySelector(modalSelector) === null;
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'a switcher was left open by an earlier suite',
+      until: (isClosed: boolean): boolean => isClosed
+    });
 
+    const wasSwitcherOpened = await pollInObsidian({
+      input: { modalSelector: MODAL_SELECTOR, pluginId: PLUGIN_ID },
+      poll({ modalSelector }): boolean {
+        return document.querySelector(modalSelector) !== null;
+      },
+      start({ app, pluginId }): void {
         app.commands.executeCommandById(`${pluginId}:open`);
-        await waitUntil({
-          message: 'the switcher is open',
-          predicate: () => document.querySelector('.alias-quick-switcher-modal') !== null,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
-
-        return document.querySelector('.alias-quick-switcher-modal') !== null;
       },
-      input: { pluginId: PLUGIN_ID, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the switcher never opened',
+      until: (isOpen: boolean): boolean => isOpen
     });
 
-    const openedPath = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, targetName: name, targetPath: path, waitTimeoutInMilliseconds }): Promise<string> {
-        const input = document.querySelector('.alias-quick-switcher-modal .prompt-input');
+    await evalInObsidian({
+      callback({ modalSelector, targetName: name }): void {
+        const input = document.querySelector(`${modalSelector} .prompt-input`);
         if (!(input instanceof HTMLInputElement)) {
           throw new TypeError('The switcher has no input.');
         }
@@ -76,30 +88,42 @@ describe('The `Open quick switcher` command', () => {
         // Input API, which does not exist on Android, and this behavior has to be proven on both.
         input.value = name;
         input.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      input: { modalSelector: MODAL_SELECTOR, targetName }
+    });
 
-        await waitUntil({
-          message: 'the note is offered',
-          predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(name)),
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+    await pollInObsidian({
+      input: { suggestionSelector: SUGGESTION_SELECTOR, targetName },
+      poll({ suggestionSelector, targetName: name }): boolean {
+        return [...document.querySelectorAll(suggestionSelector)].some((el) => el.textContent.includes(name));
+      },
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the note was never offered',
+      until: (isOffered: boolean): boolean => isOffered
+    });
 
+    await evalInObsidian({
+      callback({ suggestionSelector, targetName: name }): void {
         // Addressed by TEXT rather than by position, so a row the vault happens to also match cannot be
         // Picked by mistake.
-        const row = [...document.querySelectorAll('.suggestion-item')].find((el) => el.textContent.includes(name));
+        const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(name));
         if (!(row instanceof HTMLElement)) {
           throw new TypeError('The note was not offered.');
         }
 
         row.click();
-        await waitUntil({
-          message: 'the picked note is open',
-          predicate: () => app.workspace.getActiveFile()?.path === path,
-          timeoutInMilliseconds: waitTimeoutInMilliseconds
-        });
+      },
+      input: { suggestionSelector: SUGGESTION_SELECTOR, targetName }
+    });
 
+    // `until` runs in Node, so it compares against the path this test already holds rather than passing it in.
+    const openedPath = await pollInObsidian({
+      poll({ app }): string {
         return app.workspace.getActiveFile()?.path ?? '';
       },
-      input: { targetName, targetPath, waitTimeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS }
+      timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
+      timeoutMessage: 'the picked note never became the active file',
+      until: (path: string): boolean => path === targetPath
     });
 
     expect(wasSwitcherOpened).toBe(true);

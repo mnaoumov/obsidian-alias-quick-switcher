@@ -38,7 +38,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 2. Downloading `alias-quick-switcher-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases). It unzips into a single `alias-quick-switcher-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
-## What makes it different
+## What it does
 
 Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo` folder's folder note is aliased `Delta`. Obsidian's own switcher finds it from the first four queries and from none of the last three:
 
@@ -68,6 +68,8 @@ Segments are separated by `/` or by spaces, and a partial path works: `Delta/Ech
 
 ## Installation
 
+The plugin is not yet listed in [the official Community Plugins repository](https://community.obsidian.md/plugins). Until it is, install it as a beta release.
+
 ### Beta versions
 
 To install the latest beta release of this plugin (regardless if it is available in [the official Community Plugins repository](https://community.obsidian.md) or not), follow these steps:
@@ -80,7 +82,7 @@ To install the latest beta release of this plugin (regardless if it is available
 
 By default, debug messages for this plugin are hidden.
 
-To show them, run the following command:
+To show them, run the following command in the `DevTools Console`:
 
 ```js
 window.DEBUG.enable('alias-quick-switcher');

@@ -13,6 +13,11 @@
  * 900x1600 the community store asks for. See `scripts/vitest-config.ts` for why the shared `obsidian_test`
  * AVD cannot stand in for it.
  *
+ * **Every frame is taken with the soft keyboard up**, because every frame shows a focused search field and
+ * that is what a phone looks like with one. See {@link shoot} for what raising it takes and why the
+ * harness owns both halves. The consequence to accept: these four frames are **no longer
+ * byte-reproducible**, since the status-bar clock and the battery indicator are now in them.
+ *
  * Split across several short `evalInObsidian` calls because one call is one `execute/sync`, which
  * WebDriver caps at 30 seconds — the wall this repo's eight cross-platform suites all hit on their first
  * Android run. The waiting itself happens in NODE for the same reason: the 60s ceiling this file used to
@@ -32,11 +37,14 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { setTimeout as sleepInNode } from 'node:timers/promises';
 import {
-  captureObsidianScreenshot,
+  captureDeviceScreenshot,
   evalInObsidian,
   labelScreenshot,
   pollInObsidian,
-  readPngDimensions
+  raiseSoftKeyboard,
+  readPngDimensions,
+  resolveEmulatorDeviceId,
+  withSoftKeyboardEnabled
 } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -53,6 +61,19 @@ const HEIGHT_IN_PIXELS = 1600;
 
 const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 
+/**
+ * The switcher's search field, which is what a thumb touches to bring the keyboard up.
+ */
+const INPUT_SELECTOR = `${MODAL_SELECTOR} .prompt-input`;
+
+/**
+ * The AVD these frames are taken on, matched by name.
+ *
+ * Never the first device `adb devices` lists: a physical phone is routinely plugged into the same machine,
+ * and the shared `obsidian_test` AVD the cross-platform suites drive is a different size.
+ */
+const AVD_NAME = 'obsidian_screenshots';
+
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 600_000;
 
@@ -61,7 +82,11 @@ const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
+let deviceId = '';
+
 beforeAll(async () => {
+  deviceId = await resolveEmulatorDeviceId({ avdName: AVD_NAME });
+
   const vault = getTemporaryVault();
 
   vault.populate({
@@ -208,17 +233,35 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
- * Captures the device's framebuffer, captions it, and writes it as
+ * Captures the device's framebuffer with the soft keyboard up, captions it, and writes it as
  * `images/screenshots/screenshot-mobile-<index>.png`.
+ *
+ * Every frame here shows the switcher's focused search field, so every frame gets the keyboard — and
+ * therefore the DEVICE capture rather than the page one. `captureObsidianScreenshot` drives Appium in the
+ * WebView context, so it photographs the page: no status bar, and no keyboard, because the IME is a system
+ * window and not part of the page. That left the lower ~60-70 % of each frame as an empty band where a
+ * phone shows an IME.
+ *
+ * Two things are needed and both are easy to miss, which is why they are the harness's job rather than
+ * this file's: the AVD is built `hw.keyboard=yes`, so Android suppresses the on-screen keyboard until
+ * `withSoftKeyboardEnabled` lifts that; and a WebView does not ask for an IME on programmatic focus
+ * alone, so `raiseSoftKeyboard` puts a real touch on the field and proves it came up.
  *
  * @param index - The 1-based listing position.
  * @param caption - The caption drawn across the bottom of the frame.
  */
 async function shoot(index: number, caption: string): Promise<void> {
-  const bytes = await captureObsidianScreenshot({
-    heightInPixels: HEIGHT_IN_PIXELS,
-    vaultPath: vaultPath(),
-    widthInPixels: WIDTH_IN_PIXELS
+  const bytes = await withSoftKeyboardEnabled({
+    async callback() {
+      await raiseSoftKeyboard({
+        deviceId,
+        inputSelector: INPUT_SELECTOR,
+        vaultPath: vaultPath()
+      });
+
+      return await captureDeviceScreenshot({ deviceId });
+    },
+    deviceId
   });
 
   const labeled = await labelScreenshot(bytes, { text: caption });

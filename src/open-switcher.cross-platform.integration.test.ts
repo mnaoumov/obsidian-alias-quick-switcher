@@ -13,7 +13,7 @@ import {
  * is picked in it is what ends up open.
  *
  * Cross-platform: the manifest declares `isDesktopOnly: false`, and opening a note has to hold on a phone
- * as much as on a desktop, so the file name puts it in both projects (G47).
+ * as much as on a desktop, so the file name puts it in both projects.
  *
  * **The waiting happens in NODE, and each closure below is milliseconds of DOM reading.** A single
  * `evalInObsidian` closure is capped at ~30s by the transport, so a closure that waits is a closure that
@@ -84,7 +84,7 @@ describe('The `Open quick switcher` command', () => {
           throw new TypeError('The switcher has no input.');
         }
 
-        // A dispatched event rather than trusted input (G107): the harness drives keys through Electron's
+        // A dispatched event rather than trusted input: the harness drives keys through Electron's
         // Input API, which does not exist on Android, and this behavior has to be proven on both.
         input.value = name;
         input.dispatchEvent(new Event('input', { bubbles: true }));

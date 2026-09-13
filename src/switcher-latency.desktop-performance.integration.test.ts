@@ -31,7 +31,7 @@ import {
  * because a round trip between two `performance.now()` calls would be measuring the harness.
  *
  * Reachable ONLY via `npm run test:integration:desktop:performance`; never from a routine
- * `npm run test:integration` (G51).
+ * `npm run test:integration`.
  */
 
 const PLUGIN_ID = 'alias-quick-switcher';
@@ -160,7 +160,7 @@ describe('Per-keystroke latency at real scale', () => {
         const durations: number[] = [];
 
         for (let length = query.length - KEYSTROKE_COUNT; length <= query.length; length++) {
-          // A dispatched event rather than trusted input (G107): the harness's key path adds its own
+          // A dispatched event rather than trusted input: the harness's key path adds its own
           // Latency, which would be measured alongside the plugin's and drown it.
           input.value = query.slice(0, Math.max(length, 1));
           const start = performance.now();

@@ -201,7 +201,7 @@ async function openSwitcher(query: string): Promise<string[]> {
         throw new TypeError('The switcher has no input.');
       }
 
-      // A dispatched event rather than trusted input (G107), for the same reason the cross-platform
+      // A dispatched event rather than trusted input, for the same reason the cross-platform
       // Suites use one: the harness drives keys through Electron's input API, which Android has not got,
       // And this suite's mobile twin has to do exactly what this one does.
       input.value = currentQuery;

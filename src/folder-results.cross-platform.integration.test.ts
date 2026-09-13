@@ -14,7 +14,7 @@ import {
  * folder's alias is the only handle there is. Picking the folder opens its folder note; a folder with no
  * folder note is never offered, and resolving one never creates it.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * Cross-platform: the manifest declares `isDesktopOnly: false`. Split across calls because one
  * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
  * from Node**, since a 60s budget declared inside a closure is one the cap can never honour.
  */
@@ -98,7 +98,7 @@ describe('Folders as results', () => {
             throw new TypeError('The switcher has no input.');
           }
 
-          // A dispatched event rather than trusted input (G107): the harness drives keys through Electron's
+          // A dispatched event rather than trusted input: the harness drives keys through Electron's
           // Input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));

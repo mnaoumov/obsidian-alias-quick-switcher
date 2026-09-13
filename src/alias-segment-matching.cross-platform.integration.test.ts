@@ -16,7 +16,7 @@ import {
  * as `max(fuzzy(query, path), fuzzy(query, alias))` and never combines the two. All three must find the
  * note here, and so must the forms the built-in already handles.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). One query per pass, and **the waiting
+ * Cross-platform: the manifest declares `isDesktopOnly: false`. One query per pass, and **the waiting
  * happens in NODE**: a call is one `execute/sync`, the transport caps a single script at ~30s, and a
  * closure that waits inside that budget is one that dies on a cold phone. Each closure below is
  * milliseconds of DOM reading; `pollInObsidian` re-runs it until the Node-side `until` accepts, which is
@@ -111,7 +111,7 @@ describe('Matching an alias in every path segment', () => {
             throw new TypeError('The switcher has no input.');
           }
 
-          // A dispatched event rather than trusted input (G107): the harness drives keys through
+          // A dispatched event rather than trusted input: the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));

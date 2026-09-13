@@ -13,7 +13,7 @@ import {
  * MATCHED — the satisfying label in place of each real name — with the real path beneath it when the two
  * differ. Without it the user cannot tell why a row matched.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * Cross-platform: the manifest declares `isDesktopOnly: false`. Split across calls because one
  * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
  * from Node**, since a 60s budget declared inside a closure is one the cap can never honour.
  */
@@ -99,7 +99,7 @@ describe('The matched rendering', () => {
             throw new TypeError('The switcher has no input.');
           }
 
-          // A dispatched event rather than trusted input (G107): the harness drives keys through
+          // A dispatched event rather than trusted input: the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));

@@ -12,7 +12,7 @@ import {
  * The `excludedPathPatterns` setting, end to end against a real Obsidian: a note the user excluded is
  * never offered, and the setting takes effect on the next open with no reload.
  *
- * Cross-platform: the manifest declares `isDesktopOnly: false` (G47). Split across calls because one
+ * Cross-platform: the manifest declares `isDesktopOnly: false`. Split across calls because one
  * `evalInObsidian` is one `execute/sync`, which the transport caps at ~30s — and **the waiting is done
  * from Node** for the same reason: a 60s budget declared inside a closure is one the cap can never
  * honour, so `pollInObsidian` re-runs a short closure until the Node-side `until` accepts.
@@ -88,7 +88,7 @@ describe('The excluded paths setting', () => {
             throw new TypeError('The switcher has no input.');
           }
 
-          // A dispatched event rather than trusted input (G107): the harness drives keys through
+          // A dispatched event rather than trusted input: the harness drives keys through
           // Electron's input API, which does not exist on Android, and this has to be proven on both.
           input.value = name;
           input.dispatchEvent(new Event('input', { bubbles: true }));

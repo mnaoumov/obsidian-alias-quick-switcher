@@ -105,20 +105,11 @@ describe('The ranking setting', () => {
         until: (areBothOffered: boolean): boolean => areBothOffered
       });
 
-      // The row is read and the modal dismissed in one closure: both are instantaneous, and reading the
-      // Row after a separate round trip would let a re-render reorder the list under the assertion.
+      // The row is read in ONE closure: reading it after a separate round trip would let a re-render
+      // Reorder the list under the assertion.
       const firstRowText = await evalInObsidian({
         callback({ suggestionSelector }): string {
           const text = document.querySelector(suggestionSelector)?.textContent ?? '';
-
-          // Closed by clicking the modal background rather than by pressing Escape: the harness's
-          // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
-          // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
-          // That works on both.
-          const background = document.querySelector('.modal-bg');
-          if (background instanceof HTMLElement) {
-            background.click();
-          }
 
           return text;
         },
@@ -129,6 +120,15 @@ describe('The ranking setting', () => {
         input: { modalSelector: MODAL_SELECTOR },
         poll({ modalSelector }): boolean {
           return document.querySelector(modalSelector) === null;
+        },
+        async start({ lib: { pressKey } }): Promise<void> {
+          /*
+           * Closed with a trusted Escape, which the harness delivers on Android too since 12.0.0. A click on
+           * `.modal-bg` was the old answer and is the wrong one now: a TRUSTED tap is hit-tested at the
+           * element's centre, and the background's centre lies behind the switcher, so the tap would land on
+           * the switcher and dismiss nothing.
+           */
+          await pressKey({ key: 'Escape' });
         },
         timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
         timeoutMessage: 'the switcher never closed',

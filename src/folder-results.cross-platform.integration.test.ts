@@ -170,15 +170,6 @@ describe('Folders as results', () => {
         const wasBareFolderOffered = [...document.querySelectorAll(suggestionSelector)]
           .some((el) => el.hasClass(folderRowClass));
 
-        // Closed by clicking the modal background rather than by pressing Escape: the harness's
-        // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
-        // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
-        // That works on both.
-        const background = document.querySelector('.modal-bg');
-        if (background instanceof HTMLElement) {
-          background.click();
-        }
-
         return {
           wasBareFolderOffered,
           // Resolving a folder note must never CREATE one — the bare folder is still bare afterwards.
@@ -197,6 +188,15 @@ describe('Folders as results', () => {
       input: { modalSelector: MODAL_SELECTOR },
       poll({ modalSelector }): boolean {
         return document.querySelector(modalSelector) === null;
+      },
+      async start({ lib: { pressKey } }): Promise<void> {
+        /*
+         * Closed with a trusted Escape, which the harness delivers on Android too since 12.0.0. A click on
+         * `.modal-bg` was the old answer and is the wrong one now: a TRUSTED tap is hit-tested at the
+         * element's centre, and the background's centre lies behind the switcher, so the tap would land on
+         * the switcher and dismiss nothing.
+         */
+        await pressKey({ key: 'Escape' });
       },
       timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
       timeoutMessage: 'the switcher never closed',

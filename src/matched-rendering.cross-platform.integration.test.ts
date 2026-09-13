@@ -117,8 +117,8 @@ describe('The matched rendering', () => {
         until: (isOffered: boolean): boolean => isOffered
       });
 
-      // The whole rendering is read and the modal dismissed in one closure: reading it across separate
-      // Round trips would let a re-render change the row between the five reads.
+      // The whole rendering is read in ONE closure: reading it across separate round trips would let a
+      // Re-render change the row between the five reads.
       const rendering = await evalInObsidian({
         callback({ suggestionSelector, targetName }): RowRendering {
           const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(targetName));
@@ -134,15 +134,6 @@ describe('The matched rendering', () => {
             realPath: row.querySelector('.suggestion-note')?.textContent ?? ''
           };
 
-          // Closed by clicking the modal background rather than by pressing Escape: the harness's
-          // Trusted-key helpers are Electron-only (they reach for `remote`, which Android has none of),
-          // And a dispatched KeyboardEvent is untrusted and ignored. A plain click is the one gesture
-          // That works on both.
-          const background = document.querySelector('.modal-bg');
-          if (background instanceof HTMLElement) {
-            background.click();
-          }
-
           return read;
         },
         input: { suggestionSelector: SUGGESTION_SELECTOR, targetName: charlie }
@@ -152,6 +143,15 @@ describe('The matched rendering', () => {
         input: { modalSelector: MODAL_SELECTOR },
         poll({ modalSelector }): boolean {
           return document.querySelector(modalSelector) === null;
+        },
+        async start({ lib: { pressKey } }): Promise<void> {
+          /*
+           * Closed with a trusted Escape, which the harness delivers on Android too since 12.0.0. A click on
+           * `.modal-bg` was the old answer and is the wrong one now: a TRUSTED tap is hit-tested at the
+           * element's centre, and the background's centre lies behind the switcher, so the tap would land on
+           * the switcher and dismiss nothing.
+           */
+          await pressKey({ key: 'Escape' });
         },
         timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
         timeoutMessage: 'the switcher never closed',

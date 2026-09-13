@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-- feat: the built-in switcher's row, on ODU 100, ready for 1.0.0
+- feat: the built-in switcher's row, on obsidian-dev-utils 100, ready for 1.0.0
 - feat: match aliases in every path segment, and show which one matched
 - fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
 - chore(deps): sweep caret-ranged dependencies to latest

@@ -196,7 +196,7 @@ describe('Per-keystroke latency at real scale', () => {
     });
 
     // The measurements are not logged: a failing bound prints both sides, which is where the numbers
-    // Matter, and the fleet forbids console output from plugin code and its suites alike.
+    // Matter, and console output is not allowed from plugin code or its suites.
 
     // The query is one no other switcher can answer, so finding the note is itself part of the measurement:
     // A fast run that found nothing would be measuring the pre-filter rejecting everything.

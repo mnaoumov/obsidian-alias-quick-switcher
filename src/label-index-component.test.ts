@@ -60,7 +60,7 @@ describe('LabelIndexComponent', () => {
 
   it('should forget a folder whose folder note has just been created', () => {
     // A folder with no folder note answers with its own name alone. The note appearing is exactly the
-    // Event that makes that answer wrong, and nothing about the FOLDER changed for it to notice.
+    // event that makes that answer wrong, and nothing about the FOLDER changed for it to notice.
     expect(labelTextsOfFolder('Alpha/Hotel')).toStrictEqual(['Hotel']);
 
     const folderNote = appMock.vault.createSync__('Alpha/Hotel/Hotel.md', '---\naliases:\n  - Golf\n---\n');

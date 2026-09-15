@@ -230,9 +230,9 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
 
     // The row is the BUILT-IN switcher's own shape, measured off it rather than guessed at: a
     // `mod-complex` item holding `suggestion-content` > `suggestion-title` + `suggestion-note`, with the
-    // Alias marker in `suggestion-aux` > `suggestion-flair`. Obsidian already renders an alias hit that
-    // Way, so reusing the structure means this switcher inherits its styling — and every theme's — rather
-    // Than carrying a private copy that no theme has ever seen.
+    // alias marker in `suggestion-aux` > `suggestion-flair`. Obsidian already renders an alias hit that
+    // way, so reusing the structure means this switcher inherits its styling — and every theme's — rather
+    // than carrying a private copy that no theme has ever seen.
     el.addClass('mod-complex');
 
     const contentEl = el.createDiv({ cls: 'suggestion-content' });
@@ -246,15 +246,15 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const renderedPath = this.renderLabels(suggestion, titleEl);
 
     // The real path is shown ONLY when the rendering above is not already it. Repeating an identical path
-    // Under itself is noise, while omitting a DIFFERENT one leaves the user unable to tell what they are
-    // About to open — which is the whole point of the two-line row.
+    // under itself is noise, while omitting a DIFFERENT one leaves the user unable to tell what they are
+    // about to open — which is the whole point of the two-line row.
     if (renderedPath !== suggestion.candidate.plainPath) {
       contentEl.createDiv({ cls: 'suggestion-note', text: suggestion.candidate.displayPath });
     }
 
     // The same `lucide-forward` flair, with the same `Alias` label, that the built-in puts on an alias
-    // Hit. Without it the two-line shape is the row's only signal that an alias was involved, which is a
-    // Weaker one — and a different one from the marker the user already knows.
+    // hit. Without it the two-line shape is the row's only signal that an alias was involved, which is a
+    // weaker one — and a different one from the marker the user already knows.
     if (wasAliasUsed(suggestion)) {
       const auxEl = el.createDiv({ cls: 'suggestion-aux' });
       setIcon(auxEl.createSpan({ attr: { 'aria-label': 'Alias' }, cls: 'suggestion-flair' }), 'lucide-forward');
@@ -265,7 +265,7 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const ancestors: TFolder[] = [];
 
     // The vault root is the one folder with no parent, and it is not a position: no query segment can name
-    // It, because it contributes nothing to any vault-relative path.
+    // it, because it contributes nothing to any vault-relative path.
     let current: null | TFolder = abstractFile.parent;
     while (current?.parent) {
       ancestors.unshift(current);
@@ -314,8 +314,8 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const plainPath = buildPlainPath(positions);
     return {
       // A note's extension is noise the built-in never shows; any other file's is what tells the user
-      // What they are about to open, so it stays. `plainPath` is already the path minus the extension —
-      // Its leaf position is the file's basename — which is what makes this a choice rather than a strip.
+      // what they are about to open, so it stays. `plainPath` is already the path minus the extension —
+      // its leaf position is the file's basename — which is what makes this a choice rather than a strip.
       displayPath: file.extension === MARKDOWN_FILE_EXTENSION ? plainPath : file.path,
       haystack: buildHaystack(file.path, positions),
       isFolder: false,
@@ -334,7 +334,7 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const folderNote = this.labelIndex.resolveFolderNote(folder);
 
     // A folder with no folder note is not offered. Picking it would have nothing to open, and resolving
-    // Must never create the note that would give it something.
+    // must never create the note that would give it something.
     if (!folderNote) {
       return null;
     }
@@ -358,7 +358,7 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const seenPaths = new Set<string>();
 
     // A map rather than a scan per recent path: the candidate list is the whole vault, and the recent list
-    // Is walked on every open. The base class caps what is rendered, so nothing is capped here.
+    // is walked on every open. The base class caps what is rendered, so nothing is capped here.
     for (const path of this.app.workspace.recentFileTracker.lastOpenFiles) {
       const candidate = this.candidatesByPath.get(path);
 
@@ -394,10 +394,10 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     const renderedParts: string[] = [];
 
     // A leaf-only alias hit renders the ALIAS ALONE, which is exactly what the built-in switcher does with
-    // The same match. Rendering the whole path there would put `Alpha/Bravo/Echo` over
+    // the same match. Rendering the whole path there would put `Alpha/Bravo/Echo` over
     // `Alpha/Bravo/Charlie` — two strings one word apart, where the second line earns its space least and
-    // Reads as duplication. The full as-matched path is kept for the case that earns it: an ANCESTOR
-    // Satisfied by an alias, which is the thing no other switcher can show.
+    // reads as duplication. The full as-matched path is kept for the case that earns it: an ANCESTOR
+    // satisfied by an alias, which is the thing no other switcher can show.
     const firstRenderedIndex = isLeafOnlyAliasMatch(suggestion) ? suggestion.candidate.positions.length - 1 : 0;
 
     for (const [index, position] of suggestion.candidate.positions.entries()) {
@@ -527,7 +527,7 @@ function isLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
   const leafIndex = suggestion.candidate.positions.length - 1;
 
   // Read off `match.positions` rather than the candidate's, so a leaf satisfied by its REAL name — where
-  // The rendering is already the plain path and there is nothing to explain — is not caught by this.
+  // the rendering is already the plain path and there is nothing to explain — is not caught by this.
   if (!suggestion.match.positions[leafIndex]?.isAlias) {
     return false;
   }

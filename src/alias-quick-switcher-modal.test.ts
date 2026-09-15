@@ -15,7 +15,7 @@ import {
 } from 'vitest';
 
 // Stubbed to skip the plugin-context initialization, but it still ADDS the classes: the row styling is
-// Addressed by them, so a no-op mock would make every assertion about the rendered row vacuous.
+// addressed by them, so a no-op mock would make every assertion about the rendered row vacuous.
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
   addPluginCssClasses: (el: HTMLElement, cssClasses?: string | string[]): void => {
     el.addClass(...(typeof cssClasses === 'string' ? [cssClasses] : cssClasses ?? []));

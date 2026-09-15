@@ -53,7 +53,7 @@ describe('The `Open quick switcher` command', () => {
     });
 
     // These suites share one Obsidian, and each ends by picking something rather than by walking away,
-    // So a modal left open here means an earlier suite broke that contract.
+    // so a modal left open here means an earlier suite broke that contract.
     await pollInObsidian({
       input: { modalSelector: MODAL_SELECTOR },
       poll({ modalSelector }): boolean {
@@ -85,7 +85,7 @@ describe('The `Open quick switcher` command', () => {
         }
 
         // A dispatched event rather than trusted input: the harness drives keys through Electron's
-        // Input API, which does not exist on Android, and this behavior has to be proven on both.
+        // input API, which does not exist on Android, and this behavior has to be proven on both.
         input.value = name;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       },
@@ -105,7 +105,7 @@ describe('The `Open quick switcher` command', () => {
     await evalInObsidian({
       callback({ suggestionSelector, targetName: name }): void {
         // Addressed by TEXT rather than by position, so a row the vault happens to also match cannot be
-        // Picked by mistake.
+        // picked by mistake.
         const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(name));
         if (!(row instanceof HTMLElement)) {
           throw new TypeError('The note was not offered.');

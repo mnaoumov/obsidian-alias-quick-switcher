@@ -73,8 +73,8 @@ describe('The include non-markdown files setting', () => {
       });
 
       // The settle stays INSIDE the closure, and is the one wait that has to: one of the two assertions is
-      // About a row being ABSENT, and polling for an absence that is already true would accept instantly
-      // Whether or not the list had rendered yet. At 500ms it is nowhere near the cap.
+      // about a row being ABSENT, and polling for an absence that is already true would accept instantly
+      // whether or not the list had rendered yet. At 500ms it is nowhere near the cap.
       const isOffered = await evalInObsidian({
         async callback({ canvasName: name, modalSelector, settleDelayInMilliseconds, suggestionSelector }): Promise<boolean> {
           const input = document.querySelector(`${modalSelector} .prompt-input`);
@@ -138,7 +138,7 @@ describe('The include non-markdown files setting', () => {
           }
 
           // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-          // Base keeps protected, so a version that renamed it must fail loudly here.
+          // base keeps protected, so a version that renamed it must fail loudly here.
           if (!('pluginSettingsComponent' in plugin)) {
             throw new Error('The plugin exposes no settings component.');
           }

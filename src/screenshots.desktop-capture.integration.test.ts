@@ -95,7 +95,7 @@ beforeAll(async () => {
       app.changeTheme('obsidian');
 
       // The switcher is the subject, not the file explorer, so the sidebar is collapsed to give the modal
-      // The frame.
+      // the frame.
       app.workspace.leftSplit.collapse();
     },
     timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
@@ -128,7 +128,7 @@ describe('desktop frames of the matched row', () => {
     const rows = await openSwitcher('Delta');
 
     // The folder note is reachable twice on purpose — as a file by its own name, and as its folder by the
-    // Folder's name — so this query is the one place the two row kinds stand side by side.
+    // folder's name — so this query is the one place the two row kinds stand side by side.
     expect(rows.length).toBeGreaterThan(1);
     await shoot(3, 'A folder answers to its folder note’s alias', WIDTH_IN_PIXELS, HEIGHT_IN_PIXELS);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
@@ -142,9 +142,9 @@ describe('desktop frames of the matched row', () => {
 
   it('5 - the highlight broken into runs, close up', async () => {
     // The hardest case for legibility, and the one a full-segment query hides: when every segment matches
-    // Whole, the entire first line is highlighted and the highlight is indistinguishable from its absence.
+    // whole, the entire first line is highlighted and the highlight is indistinguishable from its absence.
     // Here each segment is matched by a fragment, so highlighted and plain text sit side by side in the
-    // Same word, directly above the muted second line.
+    // same word, directly above the muted second line.
     const rows = await openSwitcher('Alp/Del/Ech');
 
     expect(rows.length).toBeGreaterThan(0);
@@ -166,9 +166,9 @@ async function openSwitcher(query: string): Promise<string[]> {
     },
     start(): void {
       // Each shot leaves its switcher on screen — that is the point of the shot — so the next one has to
-      // Put it away before opening its own. Closed by clicking the modal background rather than by
-      // Pressing Escape, the one gesture that works on Android too, which keeps this suite and its mobile
-      // Twin the same shape.
+      // put it away before opening its own. Closed by clicking the modal background rather than by
+      // pressing Escape, the one gesture that works on Android too, which keeps this suite and its mobile
+      // twin the same shape.
       const background = document.querySelector('.modal-bg');
       if (background instanceof HTMLElement) {
         background.click();
@@ -202,8 +202,8 @@ async function openSwitcher(query: string): Promise<string[]> {
       }
 
       // A dispatched event rather than trusted input, for the same reason the cross-platform
-      // Suites use one: the harness drives keys through Electron's input API, which Android has not got,
-      // And this suite's mobile twin has to do exactly what this one does.
+      // suites use one: the harness drives keys through Electron's input API, which Android has not got,
+      // and this suite's mobile twin has to do exactly what this one does.
       input.value = currentQuery;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     },

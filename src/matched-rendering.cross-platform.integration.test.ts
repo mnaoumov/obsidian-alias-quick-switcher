@@ -118,7 +118,7 @@ describe('The matched rendering', () => {
       });
 
       // The whole rendering is read in ONE closure: reading it across separate round trips would let a
-      // Re-render change the row between the five reads.
+      // re-render change the row between the five reads.
       const rendering = await evalInObsidian({
         callback({ suggestionSelector, targetName }): RowRendering {
           const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(targetName));
@@ -175,7 +175,7 @@ describe('The matched rendering', () => {
     expect(aliasRow.hasAliasFlair).toBe(true);
 
     // Nothing about this match differs from the path, so a second line would only repeat it — and no
-    // Alias was involved, so there is nothing to flair either.
+    // alias was involved, so there is nothing to flair either.
     expect(realNameRow.hasSecondLine).toBe(false);
     expect(realNameRow.hasAliasFlair).toBe(false);
 

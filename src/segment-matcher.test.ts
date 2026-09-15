@@ -171,7 +171,7 @@ describe('matchPath', () => {
 
     it('should throw on a mode that is not one of its members', () => {
       // Only reachable from settings that were hand-edited in `data.json`, which is exactly why the switch
-      // Ends in `assertNever` rather than silently treating the unknown mode as one of the real ones.
+      // ends in `assertNever` rather than silently treating the unknown mode as one of the real ones.
       expect(() => matchFixture('Zulu', castTo<SegmentMatchMode>('Nonsense'))).toThrow();
     });
   });
@@ -201,7 +201,7 @@ describe('matchPath', () => {
   describe('choosing between two ways of laying the same query over the same path', () => {
     it('should prefer the contiguous laying over the scattered one', () => {
       // `Bravo` fits position 1 as a real name and position 2 as an alias, so the query can be laid down
-      // Contiguously (1,2) or scattered (0 skipped, 1, then 2 skipped). The contiguous one must win.
+      // contiguously (1,2) or scattered (0 skipped, 1, then 2 skipped). The contiguous one must win.
       const positions = [buildPosition('Bravo'), buildPosition('Bravo'), buildPosition('Bravo')];
       const match = matchPath({ mode: SegmentMatchMode.Substring, positions, tokens: tokenizeQuery('Bravo/Bravo') });
       expect(match?.gapCount).toBe(0);
@@ -244,7 +244,7 @@ describe('matchPath', () => {
 
     it('should reach the leaf rather than match earlier, because the tier outranks the position', () => {
       // Laying `Bravo/Bravo` over positions 0 and 1 starts earlier, but leaves the leaf unmatched — an
-      // Ancestor-only match. Reaching the leaf is worth more than starting early, so (1, 2) wins.
+      // ancestor-only match. Reaching the leaf is worth more than starting early, so (1, 2) wins.
       const positions = [buildPosition('Bravo'), buildPosition('Bravo'), buildPosition('Bravo')];
       const match = matchPath({ mode: SegmentMatchMode.Substring, positions, tokens: tokenizeQuery('Bravo/Bravo') });
       expect(match?.tier).toBe(MatchTier.RealNamesOnly);

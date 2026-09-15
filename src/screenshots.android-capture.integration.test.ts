@@ -99,7 +99,7 @@ beforeAll(async () => {
   await vault.syncToDevice();
 
   // No sidebar to collapse, unlike the desktop suite: on a phone it is a drawer that is already closed,
-  // And the switcher is a full-screen modal over whatever is behind it.
+  // and the switcher is a full-screen modal over whatever is behind it.
   await pollInObsidian({
     poll({ app }): boolean {
       const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
@@ -143,7 +143,7 @@ describe('mobile frames of the matched row', () => {
     const rows = await openSwitcher('Delta');
 
     // The folder note is reachable twice on purpose — as a file by its own name, and as its folder by the
-    // Folder's name — so this query is the one place the two row kinds stand side by side.
+    // folder's name — so this query is the one place the two row kinds stand side by side.
     expect(rows.length).toBeGreaterThan(1);
     await shoot(3, 'A folder answers to its folder note’s alias');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
@@ -170,9 +170,9 @@ async function openSwitcher(query: string): Promise<string[]> {
     },
     async start({ lib: { pressKey } }): Promise<void> {
       // Each shot leaves its switcher on screen — that is the point of the shot — so the next one has to
-      // Put it away before opening its own. Escape rather than a tap on the modal background: a trusted
-      // Tap is hit-tested at the element's centre, and the background's centre is behind the switcher, so
-      // The tap would land on the switcher itself.
+      // put it away before opening its own. Escape rather than a tap on the modal background: a trusted
+      // tap is hit-tested at the element's centre, and the background's centre is behind the switcher, so
+      // the tap would land on the switcher itself.
       await pressKey({ key: 'Escape' });
     },
     timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,

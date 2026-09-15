@@ -343,7 +343,7 @@ class PathMatcher {
     });
 
     // Both transitions increase `positionIndex`, and consuming also increases `tokenIndex`, so walking the
-    // Table in this order visits every state only after everything that can reach it has been settled.
+    // table in this order visits every state only after everything that can reach it has been settled.
     for (let positionIndex = 0; positionIndex < this.positionCount; positionIndex++) {
       for (let tokenIndex = 0; tokenIndex <= this.tokenCount; tokenIndex++) {
         this.expand(tokenIndex, positionIndex);
@@ -366,8 +366,8 @@ class PathMatcher {
     let best: null | PathMatch = null;
 
     // Best tier first, so the comparison below is exercised in both directions rather than only ever
-    // Improving. Which order the states are visited in must not change the answer — the comparison is what
-    // Decides, not the enumeration.
+    // improving. Which order the states are visited in must not change the answer — the comparison is what
+    // decides, not the enumeration.
     for (const leafKind of [LeafKind.RealName, LeafKind.Alias, LeafKind.Unmatched]) {
       for (const wasAncestorAliasUsed of [false, true]) {
         for (let pendingSkipCount = 0; pendingSkipCount <= this.positionCount; pendingSkipCount++) {
@@ -690,8 +690,8 @@ function matchSubsequence(segment: string, lowerCaseLabel: string): LabelMatch |
  */
 function resolveTier(leafKind: LeafKind, wasAncestorAliasUsed: boolean): MatchTier {
   // Deliberately not a switch ending in `assertNever`. `LeafKind` is private to this module and every value
-  // Of it is produced a few lines above, so unlike a mode read out of `data.json` there is no way for a
-  // Value outside the type to arrive here — an exhaustiveness guard would be a branch nothing can take.
+  // of it is produced a few lines above, so unlike a mode read out of `data.json` there is no way for a
+  // value outside the type to arrive here — an exhaustiveness guard would be a branch nothing can take.
   if (leafKind === LeafKind.Unmatched) {
     return MatchTier.AncestorOnly;
   }

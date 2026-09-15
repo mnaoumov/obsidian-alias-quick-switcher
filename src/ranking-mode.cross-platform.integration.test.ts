@@ -36,7 +36,7 @@ describe('The ranking setting', () => {
     const stamp = `${Date.now().toString()}${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
     const query = `Kilo${stamp}`;
     // The real-name note only PREFIXES the query, while the aliased note matches it EXACTLY. So the two
-    // Orders genuinely disagree: one leads with the real name, the other with the stronger match.
+    // orders genuinely disagree: one leads with the real name, the other with the stronger match.
     const realNameNote = `${query}Extra`;
     const aliasedNote = `Lima${stamp}`;
 
@@ -106,7 +106,7 @@ describe('The ranking setting', () => {
       });
 
       // The row is read in ONE closure: reading it after a separate round trip would let a re-render
-      // Reorder the list under the assertion.
+      // reorder the list under the assertion.
       const firstRowText = await evalInObsidian({
         callback({ suggestionSelector }): string {
           const text = document.querySelector(suggestionSelector)?.textContent ?? '';
@@ -155,7 +155,7 @@ describe('The ranking setting', () => {
           }
 
           // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-          // Base keeps protected, so a version that renamed it must fail loudly here.
+          // base keeps protected, so a version that renamed it must fail loudly here.
           if (!('pluginSettingsComponent' in plugin)) {
             throw new Error('The plugin exposes no settings component.');
           }

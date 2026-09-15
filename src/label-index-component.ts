@@ -55,7 +55,7 @@ export class LabelIndexComponent extends ComponentEx {
     }));
     this.registerEvent(this.app.vault.on('rename', (abstractFile, oldPath) => {
       // The old path may name a folder whose whole subtree moved, so the old side is always dropped as a
-      // Subtree; for a file the prefix scan simply finds nothing.
+      // subtree; for a file the prefix scan simply finds nothing.
       this.labelIndex.invalidateSubtree(oldPath);
       this.invalidateAbstractFile(abstractFile);
     }));

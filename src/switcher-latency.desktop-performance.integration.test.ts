@@ -122,8 +122,8 @@ describe('Per-keystroke latency at real scale', () => {
     });
 
     // Everything below is ONE closure on purpose: it is the measurement, and a transport round trip between
-    // Two `performance.now()` calls would be timing the harness rather than the plugin. Its only wait is
-    // The bounded open ceiling, which keeps the whole closure far inside the cap.
+    // two `performance.now()` calls would be timing the harness rather than the plugin. Its only wait is
+    // the bounded open ceiling, which keeps the whole closure far inside the cap.
     const result = await evalInObsidian({
       async callback({
         app,
@@ -139,7 +139,7 @@ describe('Per-keystroke latency at real scale', () => {
         const MIDDLE = 0.5;
 
         // Opening is where the candidate list is built and the folder-note setup re-resolved, so it is
-        // Timed separately rather than folded into the first keystroke.
+        // timed separately rather than folded into the first keystroke.
         const openStart = performance.now();
         app.commands.executeCommandById(`${pluginId}:open`);
         await waitUntil({
@@ -155,13 +155,13 @@ describe('Per-keystroke latency at real scale', () => {
         }
 
         // The query only this plugin can answer: a folder named by its folder note's alias, then a note
-        // Named by its own. Typed one character at a time, because a keystroke is the unit being measured.
+        // named by its own. Typed one character at a time, because a keystroke is the unit being measured.
         const query = `${targetFolderAlias}/${targetNoteAlias}`;
         const durations: number[] = [];
 
         for (let length = query.length - KEYSTROKE_COUNT; length <= query.length; length++) {
           // A dispatched event rather than trusted input: the harness's key path adds its own
-          // Latency, which would be measured alongside the plugin's and drown it.
+          // latency, which would be measured alongside the plugin's and drown it.
           input.value = query.slice(0, Math.max(length, 1));
           const start = performance.now();
           input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -196,7 +196,7 @@ describe('Per-keystroke latency at real scale', () => {
     });
 
     // The measurements are not logged: a failing bound prints both sides, which is where the numbers
-    // Matter, and console output is not allowed from plugin code or its suites.
+    // matter, and console output is not allowed from plugin code or its suites.
 
     // The query is one no other switcher can answer, so finding the note is itself part of the measurement:
     // A fast run that found nothing would be measuring the pre-filter rejecting everything.

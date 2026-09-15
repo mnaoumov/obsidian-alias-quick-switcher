@@ -170,6 +170,6 @@ function readLeafMatch(match: PathMatch): null | PositionMatch {
   }
 
   // Any other tier is defined by HOW the leaf matched, so it has one. Asserting says so without leaving a
-  // Fallback branch nothing can take.
+  // fallback branch nothing can take.
   return ensureNonNullable(match.positions.at(-1), 'A match outside the ancestor-only tier has a leaf');
 }

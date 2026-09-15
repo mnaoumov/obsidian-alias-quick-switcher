@@ -57,7 +57,7 @@ describe('Folders as results', () => {
         await app.vault.createFolder(bareFolder);
         await app.vault.create(`${notedFolder}/${notedFolder}.md`, `---\naliases:\n  - ${deltaAlias}\n---\n`);
         // A note INSIDE the bare folder, so the folder exists in the vault for real and is genuinely
-        // Declined for having no folder note rather than for being empty.
+        // declined for having no folder note rather than for being empty.
         await app.vault.create(`${bareFolder}/Inside-${bareFolder}.md`, 'inside');
       },
       timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
@@ -99,7 +99,7 @@ describe('Folders as results', () => {
           }
 
           // A dispatched event rather than trusted input: the harness drives keys through Electron's
-          // Input API, which does not exist on Android, and this has to be proven on both.
+          // input API, which does not exist on Android, and this has to be proven on both.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));
         },
@@ -161,7 +161,7 @@ describe('Folders as results', () => {
     });
 
     // The settle stays INSIDE the closure: the assertion is about a row being ABSENT, and polling for an
-    // Absence that is already true would accept before the folder row had a chance to appear.
+    // absence that is already true would accept before the folder row had a chance to appear.
     const bareFolderResult = await evalInObsidian({
       async callback({ app, bare: bareFolder, folderRowClass, settleDelayInMilliseconds, suggestionSelector }): Promise<BareFolderResult> {
         await sleep(settleDelayInMilliseconds);

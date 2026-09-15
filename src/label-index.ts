@@ -129,8 +129,8 @@ export class LabelIndex {
     this.folderLabels.delete(path);
 
     // A note is a candidate folder note for the folder it sits in AND — under the `ParentFolder` setup —
-    // For a sibling folder. Neither relationship is knowable from the path alone once the file is gone, so
-    // Both are dropped rather than resolved.
+    // for a sibling folder. Neither relationship is knowable from the path alone once the file is gone, so
+    // both are dropped rather than resolved.
     const lastSlashIndex = path.lastIndexOf('/');
     const parentPath = lastSlashIndex === -1 ? '' : path.slice(0, lastSlashIndex);
     this.folderLabels.delete(parentPath);

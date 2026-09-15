@@ -58,7 +58,7 @@ describe('Matching an alias in every path segment', () => {
       async start({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName, delta: deltaAlias, echo: echoAlias }): Promise<void> {
         await app.vault.createFolder(`${alphaName}/${bravoName}`);
         // The folder note of the inner folder, under the default `Folder/Folder.md` convention, aliased so
-        // The folder answers to a second name.
+        // the folder answers to a second name.
         await app.vault.create(`${alphaName}/${bravoName}/${bravoName}.md`, `---\naliases:\n  - ${deltaAlias}\n---\n`);
         await app.vault.create(`${alphaName}/${bravoName}/${charlieName}.md`, `---\naliases:\n  - ${echoAlias}\n---\n`);
       },
@@ -161,7 +161,7 @@ describe('Matching an alias in every path segment', () => {
     }
 
     // Every one of the eight forms finds the note exactly once — the four the built-in already handles,
-    // And the four it returns an empty list for.
+    // and the four it returns an empty list for.
     expect(offeredCounts).toStrictEqual(queries.map(() => 1));
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });

@@ -144,8 +144,8 @@ describe('The excluded paths setting', () => {
           }
 
           // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-          // Base keeps protected, so a version that renamed it must fail loudly here rather than at the
-          // First property access.
+          // base keeps protected, so a version that renamed it must fail loudly here rather than at the
+          // first property access.
           if (!('pluginSettingsComponent' in plugin)) {
             throw new Error('The plugin exposes no settings component.');
           }

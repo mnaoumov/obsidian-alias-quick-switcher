@@ -28,7 +28,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       }
     });
     // An entry that is not a valid pattern does not throw when assigned — the whole list silently falls back to its
-    // Default pattern — so this validator is the only thing that tells the user their pattern is broken.
+    // default pattern — so this validator is the only thing that tells the user their pattern is broken.
     this.registerValidator('excludedPathPatterns', pathsValidator);
   }
 }

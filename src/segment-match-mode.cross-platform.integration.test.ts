@@ -36,7 +36,7 @@ describe('The segment matching setting', () => {
     const stamp = `${Date.now().toString()}${Math.floor(Math.random() * STAMP_RANGE).toString()}`;
     const noteName = `Bravo${stamp}`;
     // `Brv` is inside `Bravo` in order but not contiguously — exactly the case the two modes disagree
-    // About. The stamp rides along so the query cannot match a note some other suite left behind.
+    // about. The stamp rides along so the query cannot match a note some other suite left behind.
     const brokenUpQuery = `Brv${stamp}`;
 
     await pollInObsidian({
@@ -77,8 +77,8 @@ describe('The segment matching setting', () => {
       });
 
       // The settle stays INSIDE the closure, and is the one wait that has to: one of the two assertions is
-      // About a row being ABSENT, and polling for an absence that is already true would accept instantly
-      // Whether or not the list had rendered yet. At 500ms it is nowhere near the cap.
+      // about a row being ABSENT, and polling for an absence that is already true would accept instantly
+      // whether or not the list had rendered yet. At 500ms it is nowhere near the cap.
       const isFound = await evalInObsidian({
         async callback({ modalSelector, noteName: name, query, settleDelayInMilliseconds, suggestionSelector }): Promise<boolean> {
           const input = document.querySelector(`${modalSelector} .prompt-input`);
@@ -143,7 +143,7 @@ describe('The segment matching setting', () => {
           }
 
           // Read structurally rather than asserted through `unknown`: this reaches a member the plugin
-          // Base keeps protected, so a version that renamed it must fail loudly here.
+          // base keeps protected, so a version that renamed it must fail loudly here.
           if (!('pluginSettingsComponent' in plugin)) {
             throw new Error('The plugin exposes no settings component.');
           }

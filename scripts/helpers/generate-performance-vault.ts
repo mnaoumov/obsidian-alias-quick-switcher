@@ -79,7 +79,7 @@ export function generatePerformanceVault(): PopulateFilesParams {
       written += FILES_PER_FOLDER;
     } else if (folderIndex % FOLDER_NOTE_EVERY_NTH_FOLDER === 0) {
       // A folder note named after its folder, under the default convention, aliased so the folder answers
-      // To a second name the way the measured vault's do.
+      // to a second name the way the measured vault's do.
       files[`${folderPath}/${folderName}.md`] = buildFrontmatter(`alias-of-${folderName}`);
       written++;
     }

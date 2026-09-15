@@ -49,8 +49,8 @@ export class AliasQuickSwitcherComponent extends ComponentEx {
 
   private openSwitcher(): void {
     // Once per switcher session, never per keystroke: this is where the folder-note setup is re-read from
-    // The installed `folder-notes` plugin, so reconfiguring it takes effect here with nothing copied into
-    // This plugin's own settings.
+    // the installed `folder-notes` plugin, so reconfiguring it takes effect here with nothing copied into
+    // this plugin's own settings.
     this.labelIndexComponent.refresh();
 
     new AliasQuickSwitcherModal({

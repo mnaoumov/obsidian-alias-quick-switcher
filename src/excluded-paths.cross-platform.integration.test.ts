@@ -135,7 +135,7 @@ describe('The excluded paths setting', () => {
           }
 
           interface SettingsEditor {
-            editAndSave(this: void, settingsEditor: (settings: SwitcherSettingsLike) => void): Promise<void>;
+            editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
           }
 
           const plugin = app.plugins.getPlugin(pluginId);

@@ -55,44 +55,15 @@ The workspace convention is that all plugins share the same architecture; intent
 
 ### The screenshot capture suites
 
-`npm run capture:screenshots` drives the switcher in a real Obsidian and writes
-`images/screenshots/screenshot-desktop-N.png` (five frames) and `screenshot-mobile-N.png` (four), desktop
-leg first because both legs share one machine. They exist because the two-line row is the one thing no
-assertion can settle — whether it READS as an explanation — and they double as the community-store
-listing shots.
+`npm run capture:screenshots` drives the switcher in a real Obsidian and writes `images/screenshots/screenshot-desktop-N.png` (five frames) and `screenshot-mobile-N.png` (four), desktop leg first because both legs share one machine. They exist because the two-line row is the one thing no assertion can settle — whether it READS as an explanation — and they double as the community-store listing shots.
 
-- The suites are named `*.desktop-capture.` / `*.android-capture.` so they match **none** of the standard
-  project globs: capturing opens a window and leaves a modal on screen to photograph it, which is not
-  something `npm run test:integration` should ever do.
-- The mobile leg runs on the **`obsidian_screenshots`** AVD, 900x1600 at density 320 — exactly the size the
-  store asks for, so no crop or rescale. The shared `obsidian_test` AVD cannot stand in: it is 1344x2992,
-  and resizing it at runtime recreates the activity and with it the WebView the session is attached to.
-- **`labelScreenshot` needs `sharp`**, an optional peer of `obsidian-integration-testing`. Without it every
-  frame fails at the caption step with `Cannot find package 'sharp'` — after the capture itself succeeded,
-  so the failure looks unrelated to what actually went wrong.
-- **A query that matches every segment whole highlights the entire first line**, which makes the highlight
-  indistinguishable from its absence. Frame 5 uses `Alp/Del/Ech` for that reason: partial runs put
-  highlighted and plain text side by side in the same word.
-- **`labelScreenshot` draws its band across the bottom of the frame**, which on desktop is Obsidian's
-  status bar but on a phone is the switcher's own search field — so the typed query is the one thing a
-  mobile frame does not show in full. The rows above it are what the frame is evidence for; do not caption
-  a mobile frame with something only the query could prove.
-- **The mobile frames photograph the DEVICE, not the page, and are therefore not byte-reproducible.** All
-  four show a focused search field, so all four are taken with the soft keyboard up.
-  `captureObsidianScreenshot` cannot produce that: it drives Appium in the WebView context, so it captures
-  the page, and the IME is a system window that is not part of the page — which left the lower 59–71 % of
-  each frame as an empty band where a phone shows a keyboard. `captureDeviceScreenshot` reads the
-  framebuffer instead, and brings the status-bar clock and battery indicator into the frame with it. That
-  is the trade: a frame honest about the experience, at the cost of a re-capture never being byte-identical.
-  Do not "fix" the churn by reverting to the page capture.
-- **Raising the keyboard takes TWO things, and the harness owns both.** The AVD is built `hw.keyboard=yes`,
-  so Android suppresses the on-screen keyboard entirely — `withSoftKeyboardEnabled` lifts that for the
-  duration of a shot and restores the device exactly, *including* restoring a setting that had never been
-  written, which takes a `settings delete` rather than a write. And a WebView does not ask for an IME on
-  programmatic focus alone: `raiseSoftKeyboard` puts a real `adb` touch on the field, waits for the
-  animation, and proves geometrically that the field lifted — nothing in the page reports the keyboard, so
-  the field's own offset from the bottom is the only signal. A failure writes the device framebuffer and
-  `dumpsys input_method` to `dist/screenshots/`, because a bare assertion failure here is unreadable.
+- The suites are named `*.desktop-capture.` / `*.android-capture.` so they match **none** of the standard project globs: capturing opens a window and leaves a modal on screen to photograph it, which is not something `npm run test:integration` should ever do.
+- The mobile leg runs on the **`obsidian_screenshots`** AVD, 900x1600 at density 320 — exactly the size the store asks for, so no crop or rescale. The shared `obsidian_test` AVD cannot stand in: it is 1344x2992, and resizing it at runtime recreates the activity and with it the WebView the session is attached to.
+- **`labelScreenshot` needs `sharp`**, an optional peer of `obsidian-integration-testing`. Without it every frame fails at the caption step with `Cannot find package 'sharp'` — after the capture itself succeeded, so the failure looks unrelated to what actually went wrong.
+- **A query that matches every segment whole highlights the entire first line**, which makes the highlight indistinguishable from its absence. Frame 5 uses `Alp/Del/Ech` for that reason: partial runs put highlighted and plain text side by side in the same word.
+- **`labelScreenshot` draws its band across the bottom of the frame**, which on desktop is Obsidian's status bar but on a phone is the switcher's own search field — so the typed query is the one thing a mobile frame does not show in full. The rows above it are what the frame is evidence for; do not caption a mobile frame with something only the query could prove.
+- **The mobile frames photograph the DEVICE, not the page, and are therefore not byte-reproducible.** All four show a focused search field, so all four are taken with the soft keyboard up. `captureObsidianScreenshot` cannot produce that: it drives Appium in the WebView context, so it captures the page, and the IME is a system window that is not part of the page — which left the lower 59–71 % of each frame as an empty band where a phone shows a keyboard. `captureDeviceScreenshot` reads the framebuffer instead, and brings the status-bar clock and battery indicator into the frame with it. That is the trade: a frame honest about the experience, at the cost of a re-capture never being byte-identical. Do not "fix" the churn by reverting to the page capture.
+- **Raising the keyboard takes TWO things, and the harness owns both.** The AVD is built `hw.keyboard=yes`, so Android suppresses the on-screen keyboard entirely — `withSoftKeyboardEnabled` lifts that for the duration of a shot and restores the device exactly, *including* restoring a setting that had never been written, which takes a `settings delete` rather than a write. And a WebView does not ask for an IME on programmatic focus alone: `raiseSoftKeyboard` puts a real `adb` touch on the field, waits for the animation, and proves geometrically that the field lifted — nothing in the page reports the keyboard, so the field's own offset from the bottom is the only signal. A failure writes the device framebuffer and `dumpsys input_method` to `dist/screenshots/`, because a bare assertion failure here is unreadable.
 
 ### Writing a `*.cross-platform.*` suite here
 

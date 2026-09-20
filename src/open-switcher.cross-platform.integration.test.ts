@@ -29,6 +29,8 @@ const PLUGIN_ID = 'alias-quick-switcher';
 const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 const SUGGESTION_SELECTOR = '.suggestion-item';
 
+const CENTRE_DIVISOR = 2;
+
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
@@ -103,7 +105,7 @@ describe('The `Open quick switcher` command', () => {
     });
 
     await evalInObsidian({
-      callback({ suggestionSelector, targetName: name }): void {
+      async callback({ centreDivisor, lib: { clickElement }, suggestionSelector, targetName: name }): Promise<void> {
         // Addressed by TEXT rather than by position, so a row the vault happens to also match cannot be
         // picked by mistake.
         const row = [...document.querySelectorAll(suggestionSelector)].find((el) => el.textContent.includes(name));
@@ -111,9 +113,30 @@ describe('The `Open quick switcher` command', () => {
           throw new TypeError('The note was not offered.');
         }
 
-        row.click();
+        /*
+         * A TRUSTED tap, not `row.click()`. Picking a row is the plugin's headline gesture and this suite is
+         * the only place it is exercised end to end, so it drives Obsidian's own hit-testing and click
+         * handling rather than calling the listener directly. `clickElement` is Electron's `sendInputEvent`
+         * on desktop and a CDP touch tap in the WebView on Android, so the one call proves the gesture on
+         * both platforms this file runs on.
+         *
+         * It taps the element's CENTRE and hit-tests nothing itself, so the centre has to BE the row: a
+         * scrollbar, a flair element or a row scrolled half out of the list would swallow the tap and leave
+         * the test asserting against a pick that never happened. That is checked here rather than assumed,
+         * because it is the one way this gesture can fail silently.
+         */
+        const rect = row.getBoundingClientRect();
+        const elementAtCentre = document.elementFromPoint(rect.left + rect.width / centreDivisor, rect.top + rect.height / centreDivisor);
+        if (!row.contains(elementAtCentre)) {
+          const covering = elementAtCentre === null
+            ? 'nothing'
+            : `${elementAtCentre.tagName.toLowerCase()}${[...elementAtCentre.classList].map((cls) => `.${cls}`).join('')}`;
+          throw new Error(`The row's centre is covered by ${covering}, so a trusted tap would not reach the row.`);
+        }
+
+        await clickElement({ element: row });
       },
-      input: { suggestionSelector: SUGGESTION_SELECTOR, targetName }
+      input: { centreDivisor: CENTRE_DIVISOR, suggestionSelector: SUGGESTION_SELECTOR, targetName }
     });
 
     // `until` runs in Node, so it compares against the path this test already holds rather than passing it in.

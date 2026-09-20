@@ -201,9 +201,10 @@ async function openSwitcher(query: string): Promise<string[]> {
         throw new TypeError('The switcher has no input.');
       }
 
-      // A dispatched event rather than trusted input, for the same reason the cross-platform
-      // suites use one: the harness drives keys through Electron's input API, which Android has not got,
-      // and this suite's mobile twin has to do exactly what this one does.
+      // A NOTIFICATION event, not a pretend keystroke, for the same reason the cross-platform suites use
+      // one: nothing on this path gates on `isTrusted`, and `SuggestModal` rebuilds its list from this
+      // `input` event exactly as a real keystroke makes it. `AGENTS.md` says what a trusted per-character
+      // `pressKey` would cost instead, and why this suite's mobile twin keeps doing what this one does.
       input.value = currentQuery;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     },

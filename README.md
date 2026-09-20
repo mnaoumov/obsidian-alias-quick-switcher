@@ -58,6 +58,8 @@ Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo`
 
 **Every row tells you why it matched, in the switcher's own visual language.** A hit reached through a folder alias is rendered as what you typed — `Alpha/Delta/Echo` — with the real path, `Alpha/Bravo/Charlie`, underneath it and the same alias marker Obsidian already puts on an alias hit. A row matched by real names alone shows one line, because there is nothing to explain. And a plain alias on the note itself looks exactly as it does in the built-in switcher, because it is the same row — this plugin extends that shape to the rest of the path rather than inventing a second one to learn.
 
+**A name that is not an alias says so.** Point the `Extra label property` setting at a frontmatter property — `title`, say — and its value becomes another name a note answers to, ranked and rendered exactly as an alias is. The marker on the row is what tells them apart, using Obsidian's own property icons: the alias arrow for `aliases`, the text glyph for a property, with the property's key in the tooltip. A row reached through both carries both markers, in the order the names appear in the path. (On a phone, touch and hold a marker for a second to see its tooltip.)
+
 **Real names outrank aliases.** A result matched entirely by real names ranks above one that needed an alias, so the plugin never reorders the matches you already get today. That is the default ranking; the other one treats an alias as just another name and orders purely by how well the query matched, which surfaces alias hits sooner and gives that guarantee up. Both are a setting, as is whether a segment has to match as one unbroken run or only as characters in order.
 
 ## Usage

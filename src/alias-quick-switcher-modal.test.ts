@@ -43,8 +43,8 @@ import { SegmentMatchMode } from './segment-matcher.ts';
  * The fixture from the CDP measurement, plus a non-markdown file and a second folder with no folder note.
  */
 const VAULT_FILES: Record<string, string> = {
-  'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n',
-  'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n',
+  'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\ntitle: Golf\n---\n',
+  'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\ntitle: Foxtrot\n---\n',
   'Alpha/Bravo/Sketch.canvas': '{}',
   'Alpha/Hotel/India.md': 'plain',
   'Archive/Old Note.md': 'archived',
@@ -211,6 +211,45 @@ describe('renderSuggestion', () => {
     expect(el.querySelector('.suggestion-flair')).toBeNull();
   });
 
+  /*
+   * The requirement the flair exists to satisfy: tell an alias hit from a frontmatter-property hit at a
+   * glance. `lucide-text` is not a guess — it is the glyph Obsidian itself puts beside a `text`-typed
+   * property in its Properties UI, exactly as `lucide-forward` is the one it puts beside `aliases`, so a
+   * user has met both icons before they open this switcher. The tooltip names the key, because one glyph
+   * has to stand for every configured property.
+   */
+  describe('the flair says WHICH kind of name matched', () => {
+    it('should name the frontmatter property a row was reached through', () => {
+      settings.extraLabelPropertyName = 'title';
+      expect(flairLabelsOf('Foxtrot')).toStrictEqual(['title']);
+    });
+
+    it('should show both markers on a row that needed an alias AND a property', () => {
+      settings.extraLabelPropertyName = 'title';
+
+      // In PATH order, so the markers read left to right in the same order as the labels they explain:
+      // the folder `Bravo` answered to its alias `Delta`, the note `Charlie` to its `title`.
+      expect(flairLabelsOf('Alpha/Delta/Foxtrot')).toStrictEqual(['Alias', 'title']);
+    });
+
+    it('should show one marker when two positions were reached through the same property', () => {
+      settings.extraLabelPropertyName = 'title';
+      expect(flairLabelsOf('Golf/Foxtrot')).toStrictEqual(['title']);
+    });
+
+    /*
+     * The row SHAPE must not notice the difference: a title-satisfied leaf is the same case as an
+     * alias-satisfied one and collapses to the label alone, exactly as `Echo` does above. Only the flair
+     * is allowed to tell them apart.
+     */
+    it('should render a leaf-only property hit as the label alone, the way a leaf-only alias hit renders', () => {
+      settings.extraLabelPropertyName = 'title';
+      const el = renderFirst('Foxtrot');
+      expect(el.querySelector('.suggestion-title')?.textContent).toBe('Foxtrot');
+      expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Charlie');
+    });
+  });
+
   it('should highlight only the characters the query covered', () => {
     const el = renderFirst('Alpha/Delta/Ech');
     expect([...el.querySelectorAll('.suggestion-highlight')].map((highlight) => highlight.textContent))
@@ -317,6 +356,11 @@ function createModal(): AliasQuickSwitcherModal {
   });
   modal.onOpen();
   return modal;
+}
+
+function flairLabelsOf(query: string): (null | string)[] {
+  return [...renderFirst(query).querySelectorAll(':scope .suggestion-aux .suggestion-flair')]
+    .map((flair) => flair.getAttribute('aria-label'));
 }
 
 function openTargetsFor(query: string): string[] {

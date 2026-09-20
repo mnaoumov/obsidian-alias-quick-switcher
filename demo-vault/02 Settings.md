@@ -15,6 +15,7 @@ Open **Settings -> Community plugins -> Alias Quick Switcher** to see the settin
 
 - `extraLabelPropertyName`
   - an extra frontmatter property treated as a label alongside `aliases`, so a note or a folder note can be reached by a display title that is not an alias. Leave it empty to consult only `aliases`, which is what Obsidian itself considers an alias.
+  - a name read from this property ranks and renders exactly as an alias does — the only difference is the marker on the row. An alias gets Obsidian's alias arrow; a property gets its text glyph, with the property's key as the tooltip, so a `title` is never reported to you as an alias. Hover a marker on the desktop, or touch and hold it for a second on a phone. A row reached through both an alias and a property carries both markers, in the order those names appear in the path.
 
 ## Algorithms
 

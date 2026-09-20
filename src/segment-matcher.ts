@@ -43,6 +43,28 @@ export enum LabelMatchQuality {
 }
 
 /**
+ * Where a label came from. The DP and the row shape care only whether it is the position's real name; the
+ * FLAIR is the one thing that tells an alias apart from a frontmatter property, which is why this is
+ * payload rather than a third dimension of the DP state.
+ */
+export enum LabelSourceKind {
+  /**
+   * An entry in the note's own `aliases` frontmatter property — what Obsidian itself calls an alias.
+   */
+  Alias = 'Alias',
+
+  /**
+   * The value of a configured name-bearing frontmatter property other than `aliases`.
+   */
+  Property = 'Property',
+
+  /**
+   * The real name of the file or folder at the position.
+   */
+  RealName = 'RealName'
+}
+
+/**
  * The ranking tiers, best first. The order is the whole reason the plugin never reshuffles what the
  * built-in switcher already finds: anything matched purely by real names outranks anything that needed an
  * alias.
@@ -98,19 +120,31 @@ enum LeafKind {
 /* eslint-enable no-magic-numbers -- The numbers ARE the meaning here. */
 
 /**
+ * A label that is an entry in the note's `aliases` property.
+ */
+export interface AliasLabelSource {
+  readonly kind: LabelSourceKind.Alias;
+}
+
+/**
  * One name a path position answers to.
  */
 export interface Label {
   /**
-   * Whether this label is an alias rather than the real name of the file or folder at the position.
+   * Where the label came from — the position's real name, an alias, or a frontmatter property.
    */
-  readonly isAlias: boolean;
+  readonly source: LabelSource;
 
   /**
    * The label itself, as the user would type it.
    */
   readonly text: string;
 }
+
+/**
+ * Where one label came from.
+ */
+export type LabelSource = AliasLabelSource | PropertyLabelSource | RealNameLabelSource;
 
 /**
  * Parameters for {@link matchPath}.
@@ -194,11 +228,6 @@ export interface PathPosition {
  */
 export interface PositionMatch {
   /**
-   * Whether {@link label} is an alias rather than the position's real name.
-   */
-  readonly isAlias: boolean;
-
-  /**
    * The label that satisfied the position — what the row renders in place of the real name.
    */
   readonly label: string;
@@ -212,6 +241,25 @@ export interface PositionMatch {
    * The runs inside {@link label} that the query covered, for highlighting.
    */
   readonly ranges: readonly MatchRange[];
+
+  /**
+   * Where {@link label} came from. Carried through from the {@link Label} that satisfied the position, so
+   * the row can say WHICH kind of name matched without the DP having to know.
+   */
+  readonly source: LabelSource;
+}
+
+/**
+ * A label read out of a configured name-bearing frontmatter property.
+ */
+export interface PropertyLabelSource {
+  readonly kind: LabelSourceKind.Property;
+
+  /**
+   * The frontmatter key the label was read from, verbatim as the user typed it in settings. It is what the
+   * row's flair names, so it must be the same word the Properties UI shows against that property.
+   */
+  readonly propertyName: string;
 }
 
 /**
@@ -230,6 +278,24 @@ export interface QueryToken {
    */
   readonly text: string;
 }
+
+/**
+ * A label that is the real name of the file or folder at the position.
+ */
+export interface RealNameLabelSource {
+  readonly kind: LabelSourceKind.RealName;
+}
+
+/**
+ * The source of a label that is an alias. Shared rather than built per label: the index names every file
+ * and folder in the vault, and a payload-free source has nothing to distinguish two instances by.
+ */
+export const ALIAS_LABEL_SOURCE: AliasLabelSource = { kind: LabelSourceKind.Alias };
+
+/**
+ * The source of a label that is a real name. Shared for the same reason as {@link ALIAS_LABEL_SOURCE}.
+ */
+export const REAL_NAME_LABEL_SOURCE: RealNameLabelSource = { kind: LabelSourceKind.RealName };
 
 /**
  * How many members {@link LeafKind} has, used to pack it into a state key.
@@ -473,16 +539,19 @@ class PathMatcher {
           continue;
         }
 
+        // Derived HERE and used for both of the DP's alias questions, so the tier and the row shape cannot
+        // disagree with each other about a label — see {@link checkIsAliasLike}.
+        const isAliasLike = checkIsAliasLike(label.source);
         const positionMatches = [...params.value.positionMatches];
         positionMatches[params.positionIndex] = {
-          isAlias: label.isAlias,
           label: label.text,
           quality: labelMatch.quality,
-          ranges: labelMatch.ranges
+          ranges: labelMatch.ranges,
+          source: label.source
         };
 
         this.setState({
-          leafKind: isLeaf ? (label.isAlias ? LeafKind.Alias : LeafKind.RealName) : params.leafKind,
+          leafKind: isLeaf ? (isAliasLike ? LeafKind.Alias : LeafKind.RealName) : params.leafKind,
           pendingSkipCount: 0,
           positionIndex: params.positionIndex + 1,
           tokenIndex: lastTokenIndex + 1,
@@ -493,7 +562,7 @@ class PathMatcher {
             positionMatches,
             qualityScore: params.value.qualityScore + labelMatch.quality
           },
-          wasAncestorAliasUsed: params.wasAncestorAliasUsed || (!isLeaf && label.isAlias)
+          wasAncestorAliasUsed: params.wasAncestorAliasUsed || (!isLeaf && isAliasLike)
         });
       }
     }
@@ -523,6 +592,21 @@ class PathMatcher {
 
     this.states.set(key, params.value);
   }
+}
+
+/**
+ * Whether a label names its position by something OTHER than its real name.
+ *
+ * The one distinction the matcher and the row shape are allowed to draw. A title read out of a frontmatter
+ * property must rank exactly as an alias does — or {@link MatchTier} stops being the promise the README
+ * makes — and must render the same way, so both read this rather than testing the source themselves. Only
+ * the FLAIR looks at {@link LabelSource} in full.
+ *
+ * @param source - Where the label came from.
+ * @returns Whether it is an alias or a property value rather than the real name.
+ */
+export function checkIsAliasLike(source: LabelSource): boolean {
+  return source.kind !== LabelSourceKind.RealName;
 }
 
 /**

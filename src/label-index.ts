@@ -27,6 +27,12 @@ import { resolveFolderNote } from 'obsidian-dev-utils/obsidian/folder-note';
 
 import type { Label } from './segment-matcher.ts';
 
+import {
+  ALIAS_LABEL_SOURCE,
+  LabelSourceKind,
+  REAL_NAME_LABEL_SOURCE
+} from './segment-matcher.ts';
+
 /**
  * Constructor parameters for {@link LabelIndex}.
  */
@@ -90,7 +96,7 @@ export class LabelIndex {
       return memoized;
     }
 
-    const labels = deduplicateLabels([{ isAlias: false, text: file.basename }, ...this.readAliasLabels(file)]);
+    const labels = deduplicateLabels([{ source: REAL_NAME_LABEL_SOURCE, text: file.basename }, ...this.readNonRealNameLabels(file)]);
     this.fileLabels.set(file.path, labels);
     return labels;
   }
@@ -112,8 +118,8 @@ export class LabelIndex {
 
     const folderNote = resolveFolderNote({ app: this.app, config: this.folderNoteConfig, folder });
     const labels = deduplicateLabels([
-      { isAlias: false, text: folder.name },
-      ...(folderNote ? this.readAliasLabels(folderNote) : [])
+      { source: REAL_NAME_LABEL_SOURCE, text: folder.name },
+      ...(folderNote ? this.readNonRealNameLabels(folderNote) : [])
     ]);
     this.folderLabels.set(folder.path, labels);
     return labels;
@@ -204,19 +210,31 @@ export class LabelIndex {
     this.folderLabels.clear();
   }
 
-  private readAliasLabels(file: TFile): Label[] {
+  /**
+   * Reads every name a file answers to BESIDES its real one, each stamped with where it came from.
+   *
+   * The two sources rank and render identically — that is {@link checkIsAliasLike}'s job — and are kept
+   * apart here for one reason only: the row's flair says WHICH of them matched, and a title marked as an
+   * alias tells the user something untrue about their own vault.
+   *
+   * @param file - The note to read.
+   * @returns Its aliases, then the values of the configured extra property.
+   */
+  private readNonRealNameLabels(file: TFile): Label[] {
     const frontmatter: FrontMatterCache | undefined = this.app.metadataCache.getFileCache(file)?.frontmatter ?? undefined;
-    const labels: Label[] = (parseFrontMatterAliases(frontmatter) ?? []).map((alias) => ({ isAlias: true, text: alias }));
+    const labels: Label[] = (parseFrontMatterAliases(frontmatter) ?? []).map((alias) => ({ source: ALIAS_LABEL_SOURCE, text: alias }));
 
     if (!this.extraLabelPropertyName) {
       return labels;
     }
 
+    // Built once per file rather than once per value: every label read here names the same property.
+    const source = { kind: LabelSourceKind.Property, propertyName: this.extraLabelPropertyName } as const;
     const rawExtraLabel: unknown = frontmatter?.[this.extraLabelPropertyName];
 
     for (const extraLabel of Array.isArray(rawExtraLabel) ? rawExtraLabel : [rawExtraLabel]) {
       if (typeof extraLabel === 'string' && extraLabel) {
-        labels.push({ isAlias: true, text: extraLabel });
+        labels.push({ source, text: extraLabel });
       }
     }
 

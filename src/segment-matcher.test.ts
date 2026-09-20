@@ -11,9 +11,13 @@ import type {
 } from './segment-matcher.ts';
 
 import {
+  ALIAS_LABEL_SOURCE,
+  checkIsAliasLike,
   LabelMatchQuality,
+  LabelSourceKind,
   matchPath,
   MatchTier,
+  REAL_NAME_LABEL_SOURCE,
   SegmentMatchMode,
   tokenizeQuery
 } from './segment-matcher.ts';
@@ -28,6 +32,21 @@ const FIXTURE_POSITIONS: readonly PathPosition[] = [
   buildPosition('Bravo', 'Delta'),
   buildPosition('Charlie', 'Echo')
 ];
+
+/*
+ * The one predicate both the DP and the row shape read, so the two cannot disagree about a label. A
+ * property value answers the same as an alias here ON PURPOSE: only the flair is allowed to tell them
+ * apart, and widening this would silently change the tier a title-satisfied row ranks in.
+ */
+describe('checkIsAliasLike', () => {
+  it.each([
+    [REAL_NAME_LABEL_SOURCE, false],
+    [ALIAS_LABEL_SOURCE, true],
+    [{ kind: LabelSourceKind.Property, propertyName: 'title' } as const, true]
+  ])('should answer %o with %s', (source, expected) => {
+    expect(checkIsAliasLike(source)).toBe(expected);
+  });
+});
 
 describe('tokenizeQuery', () => {
   it('should mark a slash as a hard boundary and whitespace as a soft one', () => {
@@ -74,7 +93,36 @@ describe('matchPath', () => {
   it('should report which label satisfied each position', () => {
     const match = matchFixture('Alpha/Delta/Echo');
     expect(match?.positions.map((position) => position?.label ?? null)).toStrictEqual(['Alpha', 'Delta', 'Echo']);
-    expect(match?.positions.map((position) => position?.isAlias ?? null)).toStrictEqual([false, true, true]);
+    expect(match?.positions.map((position) => position?.source.kind ?? null))
+      .toStrictEqual([LabelSourceKind.RealName, LabelSourceKind.Alias, LabelSourceKind.Alias]);
+  });
+
+  /*
+   * A title read out of a frontmatter property must rank EXACTLY as an alias does — the tier is the promise
+   * the README makes, and a purely presentational distinction must not buy a dimension of the DP state. The
+   * source is carried through to the row untouched, which is what lets the flair say which one matched.
+   */
+  describe('a label read from a frontmatter property', () => {
+    const PROPERTY_POSITIONS = [
+      buildPropertyPosition('Bravo', 'title', 'Delta'),
+      buildPropertyPosition('Charlie', 'title', 'Echo')
+    ];
+
+    it.each([
+      ['Bravo/Echo', MatchTier.LeafAlias],
+      ['Delta/Charlie', MatchTier.AncestorAlias],
+      ['Bravo/Charlie', MatchTier.RealNamesOnly]
+    ])('should tier %s exactly as the same alias match would', (query, tier) => {
+      expect(matchPath({ mode: SegmentMatchMode.Substring, positions: PROPERTY_POSITIONS, tokens: tokenizeQuery(query) })?.tier).toBe(tier);
+    });
+
+    it('should carry the property name through to the position it satisfied', () => {
+      const match = matchPath({ mode: SegmentMatchMode.Substring, positions: PROPERTY_POSITIONS, tokens: tokenizeQuery('Delta/Echo') });
+      expect(match?.positions.map((position) => position?.source ?? null)).toStrictEqual([
+        { kind: LabelSourceKind.Property, propertyName: 'title' },
+        { kind: LabelSourceKind.Property, propertyName: 'title' }
+      ]);
+    });
   });
 
   it('should match a partial path by skipping leading positions without counting a gap', () => {
@@ -256,8 +304,25 @@ describe('matchPath', () => {
 function buildPosition(name: string, ...aliases: string[]): PathPosition {
   return {
     labels: [
-      { isAlias: false, text: name },
-      ...aliases.map((alias) => ({ isAlias: true, text: alias }))
+      { source: REAL_NAME_LABEL_SOURCE, text: name },
+      ...aliases.map((alias) => ({ source: ALIAS_LABEL_SOURCE, text: alias }))
+    ]
+  };
+}
+
+/**
+ * A position whose extra name comes from a frontmatter property rather than from `aliases`.
+ *
+ * @param name - The position's real name.
+ * @param propertyName - The frontmatter key the extra name was read from.
+ * @param text - The extra name.
+ * @returns The position.
+ */
+function buildPropertyPosition(name: string, propertyName: string, text: string): PathPosition {
+  return {
+    labels: [
+      { source: REAL_NAME_LABEL_SOURCE, text: name },
+      { source: { kind: LabelSourceKind.Property, propertyName }, text }
     ]
   };
 }

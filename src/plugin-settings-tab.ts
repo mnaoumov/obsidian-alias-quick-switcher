@@ -21,7 +21,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         }
       }),
       this.settingEx({
-        desc: 'An extra frontmatter property treated as a label alongside aliases, so a note or a folder note can be reached by a display title that is not an alias. Leave empty to consult only aliases.',
+        desc: 'An extra frontmatter property treated as a label alongside aliases, so a note or a folder note can be reached by a display title that is not an alias. A row reached through it is marked with the property\'s own icon rather than the alias one, and names the property in its tooltip. Leave empty to consult only aliases.',
         name: 'Extra label property',
         render: (setting) => {
           setting.addText((text) => {

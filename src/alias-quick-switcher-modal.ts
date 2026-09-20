@@ -21,13 +21,17 @@ import type {
   RankingMode
 } from './ranking.ts';
 import type {
+  LabelSource,
   PathMatch,
   PathPosition,
+  PropertyLabelSource,
   QueryToken
 } from './segment-matcher.ts';
 
 import { createCandidateComparator } from './ranking.ts';
 import {
+  checkIsAliasLike,
+  LabelSourceKind,
   matchPath,
   SegmentMatchMode,
   tokenizeQuery
@@ -148,6 +152,35 @@ interface MatchedSuggestion extends RankedCandidate {
 }
 
 /**
+ * One marker on a row, saying which kind of name satisfied a position.
+ */
+interface SourceFlair {
+  /**
+   * The tooltip, which Obsidian shows on hover and — since the trigger is `pointerover` — on a touch and
+   * hold as well, so the marker is readable on a phone too.
+   */
+  readonly ariaLabel: string;
+
+  /**
+   * The icon to draw inside the flair.
+   */
+  readonly iconId: string;
+}
+
+/**
+ * The marker Obsidian puts beside the `aliases` property in its Properties UI, and on an alias hit in its
+ * own switcher. Kept verbatim so a plain alias row here is the row the built-in already renders.
+ */
+const ALIAS_FLAIR_ICON_ID = 'lucide-forward';
+
+/**
+ * The marker Obsidian puts beside a `text`-typed property in its Properties UI, which is what a title is.
+ * One glyph covers EVERY configured property: arbitrary property names cannot map to meaningful glyphs, so
+ * the symbol answers alias-versus-property and the tooltip answers which property.
+ */
+const PROPERTY_FLAIR_ICON_ID = 'lucide-text';
+
+/**
  * How many rows the modal shows. Obsidian's own switcher settles on a list of this order, and a longer one
  * is scrolling rather than choosing.
  */
@@ -252,12 +285,18 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
       contentEl.createDiv({ cls: 'suggestion-note', text: suggestion.candidate.displayPath });
     }
 
-    // The same `lucide-forward` flair, with the same `Alias` label, that the built-in puts on an alias
-    // hit. Without it the two-line shape is the row's only signal that an alias was involved, which is a
-    // weaker one — and a different one from the marker the user already knows.
-    if (wasAliasUsed(suggestion)) {
+    // One flair per distinct kind of name the row was actually reached by, in path order — so they read
+    // left to right in the same order as the labels they explain. Obsidian anticipates several flairs on
+    // one row and spaces them itself (`.suggestion-flair:not(:last-child)` carries a margin), so this
+    // needs no rule in this plugin's stylesheet.
+    const flairs = collectSourceFlairs(suggestion);
+
+    if (flairs.length > 0) {
       const auxEl = el.createDiv({ cls: 'suggestion-aux' });
-      setIcon(auxEl.createSpan({ attr: { 'aria-label': 'Alias' }, cls: 'suggestion-flair' }), 'lucide-forward');
+
+      for (const flair of flairs) {
+        setIcon(auxEl.createSpan({ attr: { 'aria-label': flair.ariaLabel }, cls: 'suggestion-flair' }), flair.iconId);
+      }
     }
   }
 
@@ -398,7 +437,7 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     // `Alpha/Bravo/Charlie` — two strings one word apart, where the second line earns its space least and
     // reads as duplication. The full as-matched path is kept for the case that earns it: an ANCESTOR
     // satisfied by an alias, which is the thing no other switcher can show.
-    const firstRenderedIndex = isLeafOnlyAliasMatch(suggestion) ? suggestion.candidate.positions.length - 1 : 0;
+    const firstRenderedIndex = checkIsLeafOnlyAliasMatch(suggestion) ? suggestion.candidate.positions.length - 1 : 0;
 
     for (const [index, position] of suggestion.candidate.positions.entries()) {
       if (index < firstRenderedIndex) {
@@ -457,6 +496,33 @@ function buildPlainPath(positions: readonly PathPosition[]): string {
 }
 
 /**
+ * Turns one label source into the marker that explains it, or into nothing when there is nothing to
+ * explain.
+ *
+ * Deliberately not a `switch` ending in `assertNever`, for the reason `resolveTier` gives for the same
+ * shape: every value that reaches here is produced by this plugin's own index, so an exhaustiveness guard
+ * would be a branch nothing can take under a 100% coverage gate. The annotation on the last case is what
+ * keeps the check at compile time instead — a new member of {@link LabelSourceKind} stops being assignable
+ * to {@link PropertyLabelSource} and the build fails, rather than the new kind silently borrowing the
+ * property marker.
+ *
+ * @param source - Where the label came from.
+ * @returns The flair, or `null` for a real name.
+ */
+function buildSourceFlair(source: LabelSource): null | SourceFlair {
+  if (source.kind === LabelSourceKind.RealName) {
+    return null;
+  }
+
+  if (source.kind === LabelSourceKind.Alias) {
+    return { ariaLabel: 'Alias', iconId: ALIAS_FLAIR_ICON_ID };
+  }
+
+  const propertySource: PropertyLabelSource = source;
+  return { ariaLabel: propertySource.propertyName, iconId: PROPERTY_FLAIR_ICON_ID };
+}
+
+/**
  * Rejects a candidate the query cannot possibly match, before the far more expensive walk runs.
  *
  * Sound rather than merely fast: every query token must be consumed by exactly one position, and a token
@@ -472,6 +538,33 @@ function checkHaystack(haystack: string, tokens: readonly QueryToken[], mode: Se
   return tokens.every((token) => mode === SegmentMatchMode.Fuzzy ? checkSubsequence(haystack, token.text) : haystack.includes(token.text));
 }
 
+/**
+ * Whether the ONLY position the query reached is the leaf, and an alias is what satisfied it — the exact
+ * match the built-in switcher already makes, and renders as the alias alone.
+ *
+ * A leaf satisfied by a frontmatter property is the same case and takes the same shape, which is why the
+ * test is {@link checkIsAliasLike} rather than a look at the source: only the flair may tell the two apart.
+ *
+ * @param suggestion - The suggestion being rendered.
+ * @returns Whether it is a leaf-only alias hit.
+ */
+function checkIsLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
+  if (!suggestion.match) {
+    return false;
+  }
+
+  const leafIndex = suggestion.candidate.positions.length - 1;
+  const leafMatch = suggestion.match.positions[leafIndex];
+
+  // Read off `match.positions` rather than the candidate's, so a leaf satisfied by its REAL name — where
+  // the rendering is already the plain path and there is nothing to explain — is not caught by this.
+  if (!leafMatch || !checkIsAliasLike(leafMatch.source)) {
+    return false;
+  }
+
+  return suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
+}
+
 function checkSubsequence(haystack: string, token: string): boolean {
   let haystackIndex = 0;
 
@@ -484,6 +577,48 @@ function checkSubsequence(haystack: string, token: string): boolean {
   }
 
   return true;
+}
+
+/**
+ * Works out which markers a row earns — one per distinct kind of name that actually satisfied a position.
+ *
+ * A row matched by real names alone earns none, because there is nothing to explain. An alias keeps the
+ * built-in's own marker verbatim, so a plain alias row stays indistinguishable from the one Obsidian
+ * renders for the same match. A frontmatter property gets `lucide-text` — which is not a guess: it is the
+ * glyph Obsidian itself puts beside a `text`-typed property in its Properties UI, exactly as
+ * `lucide-forward` is the one it puts beside `aliases`. The tooltip carries the property's key, since one
+ * glyph has to stand for every configured property and only the key tells them apart.
+ *
+ * @param suggestion - The suggestion being rendered.
+ * @returns The flairs, in path order, without repeats.
+ */
+function collectSourceFlairs(suggestion: Suggestion): SourceFlair[] {
+  const flairs: SourceFlair[] = [];
+
+  // Keyed on the whole flair rather than on its label, so a property a user really did name `Alias` still
+  // gets its own marker instead of being swallowed by the alias one.
+  const seenKeys = new Set<string>();
+
+  for (const positionMatch of suggestion.match?.positions ?? []) {
+    if (!positionMatch) {
+      continue;
+    }
+
+    const flair = buildSourceFlair(positionMatch.source);
+
+    if (!flair) {
+      continue;
+    }
+
+    const key = `${flair.iconId}\n${flair.ariaLabel}`;
+
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      flairs.push(flair);
+    }
+  }
+
+  return flairs;
 }
 
 /**
@@ -513,29 +648,6 @@ function deduplicateByOpenTarget(suggestions: readonly MatchedSuggestion[]): Sug
 }
 
 /**
- * Whether the ONLY position the query reached is the leaf, and an alias is what satisfied it — the exact
- * match the built-in switcher already makes, and renders as the alias alone.
- *
- * @param suggestion - The suggestion being rendered.
- * @returns Whether it is a leaf-only alias hit.
- */
-function isLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
-  if (!suggestion.match) {
-    return false;
-  }
-
-  const leafIndex = suggestion.candidate.positions.length - 1;
-
-  // Read off `match.positions` rather than the candidate's, so a leaf satisfied by its REAL name — where
-  // the rendering is already the plain path and there is nothing to explain — is not caught by this.
-  if (!suggestion.match.positions[leafIndex]?.isAlias) {
-    return false;
-  }
-
-  return suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
-}
-
-/**
  * Reads a position's real name — always its first label, by construction.
  *
  * @param position - The position.
@@ -543,15 +655,4 @@ function isLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
  */
 function readRealName(position: PathPosition): string {
   return ensureNonNullable(position.labels[0], 'Every position is built with its real name first').text;
-}
-
-/**
- * Whether any position was satisfied by an alias rather than by its real name. The condition the built-in
- * puts its flair on.
- *
- * @param suggestion - The suggestion being rendered.
- * @returns Whether an alias was used.
- */
-function wasAliasUsed(suggestion: Suggestion): boolean {
-  return suggestion.match?.positions.some((positionMatch) => positionMatch?.isAlias ?? false) ?? false;
 }

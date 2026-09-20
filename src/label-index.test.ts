@@ -18,6 +18,11 @@ import {
 import type { Label } from './segment-matcher.ts';
 
 import { LabelIndex } from './label-index.ts';
+import {
+  ALIAS_LABEL_SOURCE,
+  LabelSourceKind,
+  REAL_NAME_LABEL_SOURCE
+} from './segment-matcher.ts';
 
 const VAULT_FILES: Record<string, string> = {
   'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n',
@@ -42,19 +47,19 @@ beforeEach(() => {
 describe('getFileLabels', () => {
   it('should name a file by its basename first, then its aliases', () => {
     expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
-      { isAlias: false, text: 'Charlie' },
-      { isAlias: true, text: 'Echo' }
+      realNameLabel('Charlie'),
+      aliasLabel('Echo')
     ]);
   });
 
   it('should name a file with no frontmatter by its basename alone', () => {
-    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([{ isAlias: false, text: 'Golf' }]);
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([realNameLabel('Golf')]);
   });
 
   it('should drop an alias that repeats the basename, in any casing', () => {
     expect(labelsOfFile('Self Aliased.md')).toStrictEqual([
-      { isAlias: false, text: 'Self Aliased' },
-      { isAlias: true, text: 'Juliett' }
+      realNameLabel('Self Aliased'),
+      aliasLabel('Juliett')
     ]);
   });
 });
@@ -62,13 +67,13 @@ describe('getFileLabels', () => {
 describe('getFolderLabels', () => {
   it('should name a folder by its own name, then the aliases on its folder note', () => {
     expect(labelsOfFolder('Alpha/Bravo')).toStrictEqual([
-      { isAlias: false, text: 'Bravo' },
-      { isAlias: true, text: 'Delta' }
+      realNameLabel('Bravo'),
+      aliasLabel('Delta')
     ]);
   });
 
   it('should name a folder with no folder note by its own name alone', () => {
-    expect(labelsOfFolder('Alpha/Hotel')).toStrictEqual([{ isAlias: false, text: 'Hotel' }]);
+    expect(labelsOfFolder('Alpha/Hotel')).toStrictEqual([realNameLabel('Hotel')]);
   });
 
   it('should not create a folder note for a folder that has none', () => {
@@ -85,9 +90,23 @@ describe('the extra label property', () => {
   it('should add the property value as a label once it is named', () => {
     labelIndex.setExtraLabelPropertyName('title');
     expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
-      { isAlias: false, text: 'Charlie' },
-      { isAlias: true, text: 'Echo' },
-      { isAlias: true, text: 'Foxtrot' }
+      realNameLabel('Charlie'),
+      aliasLabel('Echo'),
+      propertyLabel('title', 'Foxtrot')
+    ]);
+  });
+
+  /*
+   * The whole reason the source is carried rather than a boolean: the row's flair names the frontmatter key
+   * the label came from, and marking a `title` as an `Alias` tells the user something untrue about their
+   * own vault. Ranking and the row shape read `checkIsAliasLike` instead, so neither can tell the two apart.
+   */
+  it('should stamp an alias and a property value with different sources', () => {
+    labelIndex.setExtraLabelPropertyName('title');
+    expect(labelsOfFile('Alpha/Bravo/Charlie.md').map((label) => label.source)).toStrictEqual([
+      { kind: LabelSourceKind.RealName },
+      { kind: LabelSourceKind.Alias },
+      { kind: LabelSourceKind.Property, propertyName: 'title' }
     ]);
   });
 
@@ -96,9 +115,9 @@ describe('the extra label property', () => {
     labelIndex.setExtraLabelPropertyName('nicknames');
     appMock.metadataCache.cache__.set('Alpha/Bravo/Golf.md', { frontmatter: { nicknames: ['Kilo', 'Lima', 7, ''] } });
     expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([
-      { isAlias: false, text: 'Golf' },
-      { isAlias: true, text: 'Kilo' },
-      { isAlias: true, text: 'Lima' }
+      realNameLabel('Golf'),
+      propertyLabel('nicknames', 'Kilo'),
+      propertyLabel('nicknames', 'Lima')
     ]);
   });
 
@@ -145,12 +164,12 @@ describe('the per-keystroke invariant', () => {
 
 describe('invalidate', () => {
   it('should forget the file, so a changed alias is picked up', () => {
-    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([{ isAlias: false, text: 'Golf' }]);
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([realNameLabel('Golf')]);
     appMock.metadataCache.cache__.set('Alpha/Bravo/Golf.md', { frontmatter: { aliases: ['Mike'] } });
     labelIndex.invalidate('Alpha/Bravo/Golf.md');
     expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([
-      { isAlias: false, text: 'Golf' },
-      { isAlias: true, text: 'Mike' }
+      realNameLabel('Golf'),
+      aliasLabel('Mike')
     ]);
   });
 
@@ -184,8 +203,8 @@ describe('invalidateSubtree', () => {
 
     appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { aliases: ['November'] } });
     expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
-      { isAlias: false, text: 'Charlie' },
-      { isAlias: true, text: 'November' }
+      realNameLabel('Charlie'),
+      aliasLabel('November')
     ]);
 
     labelsOfFolder('Alpha/Bravo');
@@ -212,8 +231,8 @@ describe('the folder-note setup', () => {
     labelsOfFile('Alpha/Bravo/Charlie.md');
     labelIndex.setFolderNoteConfig(buildCountingConfig());
     expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
-      { isAlias: false, text: 'Charlie' },
-      { isAlias: true, text: 'Echo' }
+      realNameLabel('Charlie'),
+      aliasLabel('Echo')
     ]);
   });
 
@@ -224,7 +243,7 @@ describe('the folder-note setup', () => {
       location: FolderNoteLocation.None,
       resolveName: (targetFolder: TFolder): string => targetFolder.name
     });
-    expect(labelsOfFolder('Alpha/Bravo')).toStrictEqual([{ isAlias: false, text: 'Bravo' }]);
+    expect(labelsOfFolder('Alpha/Bravo')).toStrictEqual([realNameLabel('Bravo')]);
   });
 });
 
@@ -247,6 +266,10 @@ describe('clear', () => {
     expect(resolveNameCallCount).toBe(2);
   });
 });
+
+function aliasLabel(text: string): Label {
+  return { source: ALIAS_LABEL_SOURCE, text };
+}
 
 function buildCountingConfig(): FolderNoteConfig {
   return {
@@ -274,4 +297,12 @@ function labelsOfFile(path: string): readonly Label[] {
 
 function labelsOfFolder(path: string): readonly Label[] {
   return labelIndex.getFolderLabels(folder(path));
+}
+
+function propertyLabel(propertyName: string, text: string): Label {
+  return { source: { kind: LabelSourceKind.Property, propertyName }, text };
+}
+
+function realNameLabel(text: string): Label {
+  return { source: REAL_NAME_LABEL_SOURCE, text };
 }

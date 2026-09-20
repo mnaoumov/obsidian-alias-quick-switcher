@@ -17,7 +17,8 @@ import {
 } from './ranking.ts';
 import {
   LabelMatchQuality,
-  MatchTier
+  MatchTier,
+  REAL_NAME_LABEL_SOURCE
 } from './segment-matcher.ts';
 
 interface BuildCandidateOptions {
@@ -126,7 +127,7 @@ function buildCandidate(path: string, options: BuildCandidateOptions = {}): Rank
 }
 
 function position(quality: LabelMatchQuality): PositionMatch {
-  return { isAlias: false, label: 'Label', quality, ranges: [{ length: 5, startIndex: 0 }] };
+  return { label: 'Label', quality, ranges: [{ length: 5, startIndex: 0 }], source: REAL_NAME_LABEL_SOURCE };
 }
 
 function sortPaths(candidates: RankedCandidate[], mode: RankingMode): string[] {

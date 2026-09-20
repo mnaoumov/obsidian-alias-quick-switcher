@@ -86,8 +86,11 @@ describe('The `Open quick switcher` command', () => {
           throw new TypeError('The switcher has no input.');
         }
 
-        // A dispatched event rather than trusted input: the harness drives keys through Electron's
-        // input API, which does not exist on Android, and this behavior has to be proven on both.
+        // A NOTIFICATION event, not a pretend keystroke: nothing on this path gates on `isTrusted`, and
+        // `SuggestModal` rebuilds its list from this `input` event exactly as a real keystroke makes it.
+        // Kept over a per-character trusted `pressKey` deliberately — `AGENTS.md` says what that costs.
+        // The PICK below IS trusted, and the two are not inconsistent: a tap is one round trip, where a
+        // query is one per character.
         input.value = name;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       },

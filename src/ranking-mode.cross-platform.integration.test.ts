@@ -86,8 +86,9 @@ describe('The ranking setting', () => {
             throw new TypeError('The switcher has no input.');
           }
 
-          // A dispatched event rather than trusted input: the harness drives keys through
-          // Electron's input API, which does not exist on Android, and this has to be proven on both.
+          // A NOTIFICATION event, not a pretend keystroke: nothing on this path gates on `isTrusted`, and
+          // `SuggestModal` rebuilds its list from this `input` event exactly as a real keystroke makes it.
+          // Kept over a per-character trusted `pressKey` deliberately — `AGENTS.md` says what that costs.
           input.value = currentQuery;
           input.dispatchEvent(new Event('input', { bubbles: true }));
         },

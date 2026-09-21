@@ -16,10 +16,12 @@ You gave a note an alias so you could find it by the name you actually call it, 
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-3.png"><img src="images/screenshots/screenshot-desktop-3.png" alt="A folder answers to its folder note’s alias" width="600"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-4.png"><img src="images/screenshots/screenshot-desktop-4.png" alt="A partial path is enough" width="600"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-5.png"><img src="images/screenshots/screenshot-desktop-5.png" alt="Each matched run, against the muted real path" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-desktop-6.png"><img src="images/screenshots/screenshot-desktop-6.png" alt="An alias and a title, each with its own marker" width="600"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="Matched by name — one line, nothing to explain" width="270"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="Alpha/Delta/Echo finds Alpha/Bravo/Charlie — and says so" width="270"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="A folder answers to its folder note’s alias" width="270"></a>
 <a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-4.png"><img src="images/screenshots/screenshot-mobile-4.png" alt="A partial path is enough" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-alias-quick-switcher/blob/HEAD/images/screenshots/screenshot-mobile-5.png"><img src="images/screenshots/screenshot-mobile-5.png" alt="An alias and a title, each with its own marker" width="270"></a>
 </div>
 
 </details>

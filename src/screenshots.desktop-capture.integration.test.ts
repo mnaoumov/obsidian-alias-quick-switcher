@@ -11,8 +11,9 @@
  * note row. These frames are what that judgement is made on, and they double as the community-store
  * listing shots.
  *
- * The staged vault mirrors the demo vault's worked example — `Alpha/Bravo/Charlie.md` aliased `Echo`,
- * under a `Bravo` folder note aliased `Delta` — so a reader who follows the README meets the same names.
+ * The staged vault mirrors the demo vault's worked example — `Alpha/Bravo/Charlie.md` aliased `Echo` and
+ * carrying `title: India`, under a `Bravo` folder note aliased `Delta` — so a reader who follows the
+ * README meets the same names.
  *
  * The waiting happens in NODE: a single closure is capped at ~30s by the transport, so the 60s ceiling
  * this file used to declare inside one — plus a settle on top of it — was a budget the cap could never
@@ -60,6 +61,13 @@ const CLOSE_UP_HEIGHT_IN_PIXELS = 460;
 
 const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 
+/**
+ * The frontmatter property frame 6 points the plugin at, and the value the staged `Charlie` carries under
+ * it — a name the switcher can only reach while `extraLabelPropertyName` names that property.
+ */
+const TITLE_PROPERTY_NAME = 'title';
+const TITLE_VALUE = 'India';
+
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
@@ -73,7 +81,10 @@ beforeAll(async () => {
 
   vault.populate({
     'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n\n# Bravo\n',
-    'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n\n# Charlie\n',
+    // `title` alongside the alias, exactly as the demo vault's own `Charlie` carries both — frame 6 is the
+    // one row that needs an alias and a property at once, and no other frame is affected by it because the
+    // setting that reads a property is off until frame 6 turns it on.
+    'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\ntitle: India\n---\n\n# Charlie\n',
     'Alpha/Bravo/Foxtrot.md': '# Foxtrot\n',
     'Alpha/Golf/Hotel.md': '# Hotel\n',
     'Meetings/Charlie handover.md': '# Charlie handover\n'
@@ -149,6 +160,28 @@ describe('desktop frames of the matched row', () => {
 
     expect(rows.length).toBeGreaterThan(0);
     await shoot(5, 'Each matched run, against the muted real path', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
+  }, TEST_TIMEOUT_IN_MILLISECONDS);
+
+  it('6 - an alias and a frontmatter property on one row', async () => {
+    // The only frame that needs a setting: `extraLabelPropertyName` is empty by default, which is what
+    // frames 1-5 are taken under. Turned on here and put back afterwards, because these frames share one
+    // Obsidian and one settings file.
+    await setExtraLabelPropertyName(TITLE_PROPERTY_NAME);
+
+    try {
+      // `Delta` is the FOLDER's alias and `India` is the leaf's `title`, so this one row carries both
+      // markers — the distinction the two glyphs exist for, and the thing no other frame shows.
+      const rows = await openSwitcher(`Alpha/Delta/${TITLE_VALUE}`);
+
+      // A weak-looking assertion that is not: nothing else in the staged vault answers to `India`, so a
+      // setting that failed to apply offers no row at all rather than a differently-matched one.
+      expect(rows.length).toBeGreaterThan(0);
+      // Close up, like frame 5: the markers are two small glyphs at the right edge of one row, and the
+      // whole point of the frame is telling them apart.
+      await shoot(6, 'An alias and a title, each with its own marker', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
+    } finally {
+      await setExtraLabelPropertyName('');
+    }
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
 
@@ -231,6 +264,49 @@ async function openSwitcher(query: string): Promise<string[]> {
       return [...document.querySelectorAll(`${modalSelector} .suggestion-item`)].map((el) => el.textContent);
     },
     input: { modalSelector: MODAL_SELECTOR },
+    vaultPath: vaultPath()
+  });
+}
+
+/**
+ * Points the plugin at a frontmatter property, or at none.
+ *
+ * Read structurally rather than asserted through `unknown`, the same way
+ * `source-flairs.desktop.integration.test.ts` reaches it: this touches a member the plugin base keeps
+ * protected, so a version that renamed it fails loudly here rather than at the first property access.
+ *
+ * @param propertyName - The property to treat as a name, or the empty string for `aliases` alone.
+ */
+async function setExtraLabelPropertyName(propertyName: string): Promise<void> {
+  await evalInObsidian({
+    async callback({ app, pluginId, propertyName: newPropertyName }): Promise<void> {
+      interface SettingsEditor {
+        editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
+      }
+
+      interface SwitcherSettingsLike {
+        extraLabelPropertyName: string;
+      }
+
+      const plugin = app.plugins.getPlugin(pluginId);
+      if (!plugin) {
+        throw new Error('The plugin is not enabled.');
+      }
+
+      if (!('pluginSettingsComponent' in plugin)) {
+        throw new Error('The plugin exposes no settings component.');
+      }
+
+      const candidate: unknown = plugin.pluginSettingsComponent;
+      if (typeof candidate !== 'object' || candidate === null || !('editAndSave' in candidate)) {
+        throw new TypeError('The settings component cannot save.');
+      }
+
+      await (candidate as SettingsEditor).editAndSave((settings) => {
+        settings.extraLabelPropertyName = newPropertyName;
+      });
+    },
+    input: { pluginId: PLUGIN_ID, propertyName },
     vaultPath: vaultPath()
   });
 }

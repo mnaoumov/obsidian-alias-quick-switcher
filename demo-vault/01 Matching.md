@@ -3,11 +3,11 @@
 The fixture in this vault is one note in one folder:
 
 - `Alpha/Bravo/Charlie.md`
-  - aliased **Echo**.
+  - aliased **Echo**, and carrying a `title` property of **India**.
 - `Alpha/Bravo/Bravo.md`
   - the folder note for `Alpha/Bravo`, aliased **Delta**.
 
-That gives the folder `Bravo` a second name, **Delta**, and the note `Charlie` a second name, **Echo**.
+That gives the folder `Bravo` a second name, **Delta**, and the note `Charlie` a second name, **Echo**. The `title` is not a name yet — a property becomes one only when you point the plugin at it, which is what [04 Extra names](<./04 Extra names.md>) is about.
 
 ## What Obsidian already does
 

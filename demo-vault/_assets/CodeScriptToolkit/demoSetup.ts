@@ -4,6 +4,37 @@ import { Notice } from 'obsidian';
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
+const SWITCHER_COMMAND_ID = 'open';
+const SWITCHER_INPUT_SELECTOR = '.alias-quick-switcher-modal .prompt-input';
+
+/**
+ * Opens the switcher with a query already in its search field, so a note can hand the reader the result
+ * of a query rather than the instruction to type one.
+ *
+ * The switcher is opened by the plugin's own command, which builds the modal synchronously — so its input
+ * is in the document by the time {@link runCommand} returns, and no waiting is needed.
+ *
+ * A missing input THROWS rather than showing a notice, unlike the rest of this file. The demo-vault button
+ * suite clicks every button in the vault against a real Obsidian and only an exception reaches it, so a
+ * notice here would leave this button the one whose promise nothing checks. The reader loses nothing: the
+ * switcher is open either way, and the message says what to type into it.
+ *
+ * Manual equivalent: run the command and type the query.
+ */
+export function openSwitcherWithQuery(app: App, query: string): void {
+  runCommand(app, SWITCHER_COMMAND_ID);
+
+  const input = document.querySelector(SWITCHER_INPUT_SELECTOR);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`The switcher has no search field to type into — type ${query} into it yourself.`);
+  }
+
+  // A notification that the value changed, not a pretend keystroke: `SuggestModal` rebuilds its list from
+  // `input`, and nothing on that path gates on `isTrusted`.
+  input.value = query;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 /**
  * Runs one of the plugin's commands, so a command a note names is a command that note can run.
  *

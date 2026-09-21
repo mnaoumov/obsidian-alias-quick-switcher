@@ -4,7 +4,7 @@ Welcome to the [Alias Quick Switcher](https://github.com/mnaoumov/obsidian-alias
 
 **How to try it:** open [01 Matching](<./01 Matching.md>) and run the queries it lists against the fixture in `Alpha/`. Every query there is one press from the note, so you can compare this switcher with Obsidian's own without leaving the page.
 
-This vault ships a deliberately tiny fixture — one note, one folder, one alias each — because the difference this plugin makes is visible with exactly that much and gets harder to see with more.
+This vault ships a deliberately tiny fixture — one note, one folder, one alias each, and a single `title` property for the one setting that reads one — because the difference this plugin makes is visible with exactly that much and gets harder to see with more.
 
 ## Feature
 

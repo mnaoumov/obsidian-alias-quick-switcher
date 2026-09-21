@@ -40,10 +40,12 @@ import {
   captureDeviceScreenshot,
   evalInObsidian,
   labelScreenshot,
+  parseInputMethodState,
   pollInObsidian,
   raiseSoftKeyboard,
   readPngDimensions,
   resolveEmulatorDeviceId,
+  runAdbText,
   withSoftKeyboardEnabled
 } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
@@ -74,11 +76,25 @@ const INPUT_SELECTOR = `${MODAL_SELECTOR} .prompt-input`;
  */
 const AVD_NAME = 'obsidian_screenshots';
 
+/**
+ * The frontmatter property frame 5 points the plugin at, and the value the staged `Charlie` carries under
+ * it — a name the switcher can only reach while `extraLabelPropertyName` names that property.
+ */
+const TITLE_PROPERTY_NAME = 'title';
+const TITLE_VALUE = 'India';
+
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 600_000;
 
 const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
 const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
+const KEYBOARD_RETRACT_DELAY_IN_MILLISECONDS = 900;
+
+/**
+ * The flag `dumpsys input_method` sets while an IME is showing. Nothing in the page reports the keyboard,
+ * so the device's own answer is the only one there is.
+ */
+const INPUT_SHOWN_STATE = 'mInputShown=true';
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
@@ -91,7 +107,10 @@ beforeAll(async () => {
 
   vault.populate({
     'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n\n# Bravo\n',
-    'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n\n# Charlie\n',
+    // `title` alongside the alias, exactly as the demo vault's own `Charlie` carries both — frame 5 is the
+    // one row that needs an alias and a property at once, and no other frame is affected by it because the
+    // setting that reads a property is off until frame 5 turns it on.
+    'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\ntitle: India\n---\n\n# Charlie\n',
     'Alpha/Bravo/Foxtrot.md': '# Foxtrot\n',
     'Alpha/Golf/Hotel.md': '# Hotel\n',
     'Meetings/Charlie handover.md': '# Charlie handover\n'
@@ -154,7 +173,73 @@ describe('mobile frames of the matched row', () => {
     expect(rows.length).toBeGreaterThan(0);
     await shoot(4, 'A partial path is enough');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
+
+  it('5 - an alias and a frontmatter property on one row', async () => {
+    // The only frame that needs a setting: `extraLabelPropertyName` is empty by default, which is what
+    // frames 1-4 are taken under. Turned on here and put back afterwards, because these frames share one
+    // Obsidian and one settings file.
+    await setExtraLabelPropertyName(TITLE_PROPERTY_NAME);
+
+    try {
+      // `Delta` is the FOLDER's alias and `India` is the leaf's `title`, so this one row carries both
+      // markers. It earns a mobile frame of its own because the markers are the smallest thing on the row
+      // and a phone is where that is hardest — and because a tooltip is reached by touch and hold here.
+      const rows = await openSwitcher(`Alpha/Delta/${TITLE_VALUE}`);
+
+      // A weak-looking assertion that is not: nothing else in the staged vault answers to `India`, so a
+      // setting that failed to apply offers no row at all rather than a differently-matched one.
+      expect(rows.length).toBeGreaterThan(0);
+      await shoot(5, 'An alias and a title, each with its own marker');
+    } finally {
+      await setExtraLabelPropertyName('');
+    }
+  }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
+
+/**
+ * Asks the DEVICE whether an IME is showing, since nothing in the page reports one.
+ *
+ * @returns A {@link Promise} that resolves to whether the soft keyboard is up.
+ */
+async function checkIsSoftKeyboardShown(): Promise<boolean> {
+  const dump = await runAdbText({
+    commandArguments: ['shell', 'dumpsys', 'input_method'],
+    deviceId
+  });
+
+  return parseInputMethodState(dump).includes(INPUT_SHOWN_STATE);
+}
+
+/**
+ * Puts the soft keyboard down if one is up, so the raise that follows has a field that has not moved yet
+ * to measure against.
+ *
+ * `KEYCODE_BACK` is what Android defines for this: a showing IME consumes the key and retracts, and the
+ * app behind it never sees it — which is why this cannot close the switcher instead. The device is asked
+ * FIRST for exactly that reason: with no IME showing, the same key would reach the app and close the
+ * switcher this frame is about to photograph.
+ *
+ * It fails here rather than leaving {@link raiseSoftKeyboard} to fail: a keyboard that is already up makes
+ * that call report `the keyboard did not come up` about a keyboard that is up, which is the most
+ * misleading error this suite can produce.
+ */
+async function lowerSoftKeyboard(): Promise<void> {
+  if (!await checkIsSoftKeyboardShown()) {
+    return;
+  }
+
+  await pressBackAndSettle();
+  if (!await checkIsSoftKeyboardShown()) {
+    return;
+  }
+
+  // One retry, because the first BACK can land while the IME is still animating up from the focus that
+  // raised it, and an IME mid-animation swallows it without retracting.
+  await pressBackAndSettle();
+  if (await checkIsSoftKeyboardShown()) {
+    throw new Error('The soft keyboard would not retract, so the raise that follows could not prove anything.');
+  }
+}
 
 /**
  * Opens the switcher, types a query, and leaves it on screen for the capture.
@@ -233,6 +318,61 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
+ * Presses BACK on the device and gives the IME time to finish retracting.
+ */
+async function pressBackAndSettle(): Promise<void> {
+  await runAdbText({
+    commandArguments: ['shell', 'input', 'keyevent', 'KEYCODE_BACK'],
+    deviceId
+  });
+
+  await sleepInNode(KEYBOARD_RETRACT_DELAY_IN_MILLISECONDS);
+}
+
+/**
+ * Points the plugin at a frontmatter property, or at none.
+ *
+ * Read structurally rather than asserted through `unknown`, the same way
+ * `source-flairs.desktop.integration.test.ts` reaches it: this touches a member the plugin base keeps
+ * protected, so a version that renamed it fails loudly here rather than at the first property access.
+ *
+ * @param propertyName - The property to treat as a name, or the empty string for `aliases` alone.
+ */
+async function setExtraLabelPropertyName(propertyName: string): Promise<void> {
+  await evalInObsidian({
+    async callback({ app, pluginId, propertyName: newPropertyName }): Promise<void> {
+      interface SettingsEditor {
+        editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
+      }
+
+      interface SwitcherSettingsLike {
+        extraLabelPropertyName: string;
+      }
+
+      const plugin = app.plugins.getPlugin(pluginId);
+      if (!plugin) {
+        throw new Error('The plugin is not enabled.');
+      }
+
+      if (!('pluginSettingsComponent' in plugin)) {
+        throw new Error('The plugin exposes no settings component.');
+      }
+
+      const candidate: unknown = plugin.pluginSettingsComponent;
+      if (typeof candidate !== 'object' || candidate === null || !('editAndSave' in candidate)) {
+        throw new TypeError('The settings component cannot save.');
+      }
+
+      await (candidate as SettingsEditor).editAndSave((settings) => {
+        settings.extraLabelPropertyName = newPropertyName;
+      });
+    },
+    input: { pluginId: PLUGIN_ID, propertyName },
+    vaultPath: vaultPath()
+  });
+}
+
+/**
  * Captures the device's framebuffer with the soft keyboard up, captions it, and writes it as
  * `images/screenshots/screenshot-mobile-<index>.png`.
  *
@@ -247,12 +387,27 @@ async function openSwitcher(query: string): Promise<string[]> {
  * `withSoftKeyboardEnabled` lifts that; and a WebView does not ask for an IME on programmatic focus
  * alone, so `raiseSoftKeyboard` puts a real touch on the field and proves it came up.
  *
+ * The frame starts by putting any keyboard already up back DOWN, and that is what makes a suite of
+ * several frames possible at all. `raiseSoftKeyboard` proves the lift as a DELTA against a baseline read
+ * just before its touch, so a keyboard that is already up reads as a field that never moved — the blind
+ * spot its own diagnostic names. Measured here on 2026-09-20: frame 1 passed and frames 2-5 all failed
+ * `the keyboard did not come up` with `lift=0` while the device reported `mInputShown=true`, and the
+ * failure framebuffer showed a correctly lifted field under a fully drawn keyboard. Lowering it first
+ * keeps every frame's proof honest instead of teaching the suite to accept an unproved one.
+ *
+ * It has to happen HERE rather than after the previous capture, which was tried first and did not work:
+ * the IME comes back on its own when {@link openSwitcher} opens the next switcher and Obsidian focuses
+ * its field, so a keyboard lowered at the end of the previous frame is up again before this frame's
+ * baseline is read.
+ *
  * @param index - The 1-based listing position.
  * @param caption - The caption drawn across the bottom of the frame.
  */
 async function shoot(index: number, caption: string): Promise<void> {
   const bytes = await withSoftKeyboardEnabled({
     async callback() {
+      await lowerSoftKeyboard();
+
       await raiseSoftKeyboard({
         deviceId,
         inputSelector: INPUT_SELECTOR,

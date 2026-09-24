@@ -33,10 +33,7 @@ beforeEach(() => {
   const appMock = App.createConfigured__({ files: { 'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\n---\n' } });
   app = appMock.asOriginalType__();
   commands = [];
-  labelIndexComponent = new LabelIndexComponent({
-    app,
-    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings: new PluginSettings() })
-  });
+  labelIndexComponent = new LabelIndexComponent({ app });
   labelIndexComponent.load();
 });
 

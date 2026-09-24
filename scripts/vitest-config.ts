@@ -34,6 +34,12 @@ const SCREENSHOT_AVD_NAME = 'obsidian_screenshots';
 const APPIUM_URL = 'http://localhost:4723';
 
 /**
+ * The desktop and Android projects' global setup: the harness's own, plus the dependency this plugin cannot
+ * load without.
+ */
+const GLOBAL_SETUP_FILE = './scripts/vitest-global-setup.ts';
+
+/**
  * The screenshots AVD is cold-booted and rarely used, so Obsidian's first layout on it is far slower than
  * on the well-warmed shared one; the 90s default expires while it is still starting up.
  */
@@ -61,6 +67,11 @@ export const config = defineObsidianPluginVitestConfig({
     // tens of thousands of notes. So its setup is OVERRIDDEN in place; returning a second project of the
     // same name is rejected by vitest as a duplicate rather than treated as an override.
     context.desktopPerformance.globalSetup = ['./scripts/vitest-global-setup-performance.ts'];
+
+    // Every vault must carry Advanced Metadata Cache, which this plugin declares as a dependency and loads
+    // nothing without. Replaced BEFORE the capture projects below spread these two, so they inherit it.
+    context.desktop.globalSetup = [GLOBAL_SETUP_FILE];
+    context.android.globalSetup = [GLOBAL_SETUP_FILE];
 
     return [
       {

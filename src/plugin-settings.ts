@@ -10,12 +10,13 @@ export class PluginSettings {
   public excludedPathPatterns: string[] = [];
 
   /**
-   * An extra frontmatter property whose value is treated as a label alongside `aliases`, so a note or a
-   * folder note can be reached by a display title that is not an alias.
+   * The extra label property a user configured before Advanced Metadata Cache took the setting over, waiting to
+   * be proposed to it.
    *
-   * Empty means only `aliases` is consulted, which is what Obsidian itself considers an alias.
+   * Not a setting anyone edits: it is filled once, from the retired `extraLabelPropertyName`, and cleared only
+   * when the user applies the migration in that plugin's dialog. `null` means there is nothing to hand over.
    */
-  public extraLabelPropertyName = '';
+  public proposedTitlePropertyName: null | string = null;
 
   /**
    * Which order matching results are shown in.

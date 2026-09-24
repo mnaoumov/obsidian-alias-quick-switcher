@@ -26,3 +26,6 @@ dist
 /tsconfig.tsbuildinfo
 .claude/settings.local.json
 coverage
+
+# Released builds of dependency plugins, downloaded for the integration vaults
+.cache

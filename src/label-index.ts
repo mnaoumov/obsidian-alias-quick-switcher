@@ -43,16 +43,16 @@ export interface LabelIndexConstructorParams {
   readonly app: App;
 
   /**
-   * An extra frontmatter property whose value is treated as a label alongside `aliases`. Empty means only
-   * `aliases` is consulted.
-   */
-  readonly extraLabelPropertyName: string;
-
-  /**
    * The already-resolved folder-note setup. Resolved by the caller so the whole index shares ONE answer
    * instead of asking per folder.
    */
   readonly folderNoteConfig: FolderNoteConfig;
+
+  /**
+   * The frontmatter properties whose values are treated as labels alongside `aliases`, in the order they were
+   * configured. Empty means only `aliases` is consulted.
+   */
+  readonly titlePropertyNames: readonly string[];
 }
 
 /**
@@ -63,20 +63,20 @@ export interface LabelIndexConstructorParams {
  */
 export class LabelIndex {
   private readonly app: App;
-  private extraLabelPropertyName: string;
   private readonly fileLabels = new Map<string, readonly Label[]>();
   private readonly folderLabels = new Map<string, readonly Label[]>();
   private folderNoteConfig: FolderNoteConfig;
+  private titlePropertyNames: readonly string[];
 
   public constructor(params: LabelIndexConstructorParams) {
     this.app = params.app;
-    this.extraLabelPropertyName = params.extraLabelPropertyName;
     this.folderNoteConfig = params.folderNoteConfig;
+    this.titlePropertyNames = [...params.titlePropertyNames];
   }
 
   /**
    * Forgets every memoized answer. Called when something that changes ALL answers changes — the
-   * folder-note setup, or the extra-label property.
+   * folder-note setup, or the title properties.
    */
   public clear(): void {
     this.fileLabels.clear();
@@ -183,20 +183,6 @@ export class LabelIndex {
   }
 
   /**
-   * Sets the extra-label property, forgetting every memoized answer when it actually changes.
-   *
-   * @param extraLabelPropertyName - The new property name.
-   */
-  public setExtraLabelPropertyName(extraLabelPropertyName: string): void {
-    if (this.extraLabelPropertyName === extraLabelPropertyName) {
-      return;
-    }
-
-    this.extraLabelPropertyName = extraLabelPropertyName;
-    this.clear();
-  }
-
-  /**
    * Adopts a freshly-resolved folder-note setup.
    *
    * The folder answers are dropped unconditionally rather than compared against the previous setup: the
@@ -211,6 +197,26 @@ export class LabelIndex {
   }
 
   /**
+   * Sets the title properties, forgetting every memoized answer when the list actually changes.
+   *
+   * Compared rather than adopted blindly because it is re-read on every switcher open and almost never changes
+   * between two of them — dropping every memoized label each time would rebuild the index once per session.
+   *
+   * @param titlePropertyNames - The new property names, in configured order.
+   */
+  public setTitlePropertyNames(titlePropertyNames: readonly string[]): void {
+    if (
+      titlePropertyNames.length === this.titlePropertyNames.length
+      && titlePropertyNames.every((titlePropertyName, index) => titlePropertyName === this.titlePropertyNames[index])
+    ) {
+      return;
+    }
+
+    this.titlePropertyNames = [...titlePropertyNames];
+    this.clear();
+  }
+
+  /**
    * Reads every name a file answers to BESIDES its real one, each stamped with where it came from.
    *
    * The two sources rank and render identically — that is {@link checkIsAliasLike}'s job — and are kept
@@ -218,23 +224,21 @@ export class LabelIndex {
    * alias tells the user something untrue about their own vault.
    *
    * @param file - The note to read.
-   * @returns Its aliases, then the values of the configured extra property.
+   * @returns Its aliases, then the values of each title property in configured order.
    */
   private readNonRealNameLabels(file: TFile): Label[] {
     const frontmatter: FrontMatterCache | undefined = this.app.metadataCache.getFileCache(file)?.frontmatter ?? undefined;
     const labels: Label[] = (parseFrontMatterAliases(frontmatter) ?? []).map((alias) => ({ source: ALIAS_LABEL_SOURCE, text: alias }));
 
-    if (!this.extraLabelPropertyName) {
-      return labels;
-    }
+    for (const titlePropertyName of this.titlePropertyNames) {
+      // Built once per property rather than once per value: every label read in one pass names the same property.
+      const source = { kind: LabelSourceKind.Property, propertyName: titlePropertyName } as const;
+      const rawTitle: unknown = frontmatter?.[titlePropertyName];
 
-    // Built once per file rather than once per value: every label read here names the same property.
-    const source = { kind: LabelSourceKind.Property, propertyName: this.extraLabelPropertyName } as const;
-    const rawExtraLabel: unknown = frontmatter?.[this.extraLabelPropertyName];
-
-    for (const extraLabel of Array.isArray(rawExtraLabel) ? rawExtraLabel : [rawExtraLabel]) {
-      if (typeof extraLabel === 'string' && extraLabel) {
-        labels.push({ source, text: extraLabel });
+      for (const title of Array.isArray(rawTitle) ? rawTitle : [rawTitle]) {
+        if (typeof title === 'string' && title) {
+          labels.push({ source, text: title });
+        }
       }
     }
 

@@ -68,6 +68,12 @@ let appMock: App;
 let openFileMock: ReturnType<typeof vi.fn>;
 let settings: PluginSettings;
 
+/**
+ * The title properties Advanced Metadata Cache would answer with. Owned by that plugin rather than by these
+ * settings, so a test sets them here and the index is built from them.
+ */
+let titlePropertyNames: string[];
+
 beforeEach(async () => {
   vi.restoreAllMocks();
   const { App: AppMock } = await import('obsidian-test-mocks/obsidian');
@@ -77,6 +83,7 @@ beforeEach(async () => {
   openFileMock = vi.fn().mockResolvedValue(undefined);
   app.workspace.getLeaf = vi.fn().mockReturnValue(castTo<WorkspaceLeaf>({ openFile: openFileMock }));
   settings = new PluginSettings();
+  titlePropertyNames = [];
 });
 
 describe('the nine query forms measured against the built-in switcher', () => {
@@ -220,12 +227,12 @@ describe('renderSuggestion', () => {
    */
   describe('the flair says WHICH kind of name matched', () => {
     it('should name the frontmatter property a row was reached through', () => {
-      settings.extraLabelPropertyName = 'title';
+      titlePropertyNames = ['title'];
       expect(flairLabelsOf('Foxtrot')).toStrictEqual(['title']);
     });
 
     it('should show both markers on a row that needed an alias AND a property', () => {
-      settings.extraLabelPropertyName = 'title';
+      titlePropertyNames = ['title'];
 
       // In PATH order, so the markers read left to right in the same order as the labels they explain:
       // the folder `Bravo` answered to its alias `Delta`, the note `Charlie` to its `title`.
@@ -233,7 +240,7 @@ describe('renderSuggestion', () => {
     });
 
     it('should show one marker when two positions were reached through the same property', () => {
-      settings.extraLabelPropertyName = 'title';
+      titlePropertyNames = ['title'];
       expect(flairLabelsOf('Golf/Foxtrot')).toStrictEqual(['title']);
     });
 
@@ -243,7 +250,7 @@ describe('renderSuggestion', () => {
      * is allowed to tell them apart.
      */
     it('should render a leaf-only property hit as the label alone, the way a leaf-only alias hit renders', () => {
-      settings.extraLabelPropertyName = 'title';
+      titlePropertyNames = ['title'];
       const el = renderFirst('Foxtrot');
       expect(el.querySelector('.suggestion-title')?.textContent).toBe('Foxtrot');
       expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Charlie');
@@ -349,8 +356,8 @@ function createModal(): AliasQuickSwitcherModal {
     app,
     labelIndex: new LabelIndex({
       app,
-      extraLabelPropertyName: settings.extraLabelPropertyName,
-      folderNoteConfig: resolveFolderNoteConfig({ app })
+      folderNoteConfig: resolveFolderNoteConfig({ app }),
+      titlePropertyNames
     }),
     settings: castTo<SwitcherSettings>(settings)
   });

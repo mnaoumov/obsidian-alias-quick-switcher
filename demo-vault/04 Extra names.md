@@ -1,8 +1,8 @@
 # Extra names
 
-An alias is not the only place a note keeps a name. Plenty of vaults carry a display title in a frontmatter property — `title`, most often, written there by a template or by another plugin — and that name is invisible to every switcher, including this one, until you say which property to read.
+An alias is not the only place a note keeps a name. Plenty of vaults carry a display title in a frontmatter property — `title`, most often, written there by a template or by another plugin — and that name is invisible to every switcher, including this one, until something says which property to read.
 
-`extraLabelPropertyName` is where you say it. Point it at a property and its value becomes another name the note answers to, in every segment of a path, ranked and rendered exactly as an alias is. Leave it empty and only `aliases` is consulted, which is what Obsidian itself considers an alias.
+That something is the **Titles** module of **Advanced Metadata Cache**, the plugin this switcher depends on. Turn it on and every property in its list — `title` by default — becomes another name the note answers to, in every segment of a path, ranked and rendered exactly as an alias is. Leave it off and only `aliases` is consulted, which is what Obsidian itself considers an alias. The list lives in that plugin rather than in this one so that every plugin reading titles agrees on it, and you type `title` in one place.
 
 ## The fixture already carries one
 
@@ -19,10 +19,10 @@ So `Alpha/Delta/Echo` finds the note today and `Alpha/Delta/India` finds nothing
 ---
 caption: Read the title property as a name
 ---
-await require('/demoSetup.ts').setSetting(app, 'extraLabelPropertyName', 'title');
+await require('/demoSetup.ts').setTitlesModuleEnabled(app, true);
 ```
 
-Manual equivalent: set **Extra label property** to `title` in **Settings -> Community plugins -> Alias Quick Switcher**.
+Manual equivalent: turn the **Titles** module on in **Settings -> Community plugins -> Advanced Metadata Cache**. Its property list already says `title`.
 
 Now try the query the note was unreachable by:
 
@@ -52,9 +52,9 @@ That distinction is the only thing separating a property from an alias. Everythi
 ---
 caption: Consult aliases only
 ---
-await require('/demoSetup.ts').setSetting(app, 'extraLabelPropertyName', '');
+await require('/demoSetup.ts').setTitlesModuleEnabled(app, false);
 ```
 
-`Alpha/Delta/India` stops finding anything and `Alpha/Delta/Echo` goes on working — the property is a name only while you are pointing at it.
+`Alpha/Delta/India` stops finding anything and `Alpha/Delta/Echo` goes on working — the property is a name only while the module is reading it.
 
-One property at a time, and it applies to folder notes as well as notes: a folder whose folder note carries a `title` answers to it the same way `Alpha/Bravo` answers to `Delta`.
+Add more properties to the module's list and each is read the same way, each with its own key in the tooltip. It applies to folder notes as well as notes: a folder whose folder note carries a `title` answers to it the same way `Alpha/Bravo` answers to `Delta`.

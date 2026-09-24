@@ -24,6 +24,9 @@ import {
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
+// The plugin that owns the title properties this switcher reads, and whose Titles module a frame switches on.
+const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
+
 const ALIAS_FLAIR_ICON_ID = 'lucide-forward';
 const PROPERTY_FLAIR_ICON_ID = 'lucide-text';
 
@@ -89,15 +92,16 @@ describe('The source flairs', () => {
       until: (areCached: boolean): boolean => areCached
     });
 
-    async function setExtraLabelPropertyName(propertyName: string): Promise<void> {
+    async function setTitleProperties(propertyNames: string[]): Promise<void> {
       await evalInObsidian({
-        async callback({ app, pluginId, propertyName: newPropertyName }): Promise<void> {
+        async callback({ app, pluginId, propertyNames: newPropertyNames }): Promise<void> {
           interface SettingsEditor {
-            editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
+            editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
           }
 
-          interface SwitcherSettingsLike {
-            extraLabelPropertyName: string;
+          interface TitlesSettingsLike {
+            isTitlesModuleEnabled: boolean;
+            titlePropertyNames: string[];
           }
 
           const plugin = app.plugins.getPlugin(pluginId);
@@ -118,10 +122,14 @@ describe('The source flairs', () => {
           }
 
           await (candidate as SettingsEditor).editAndSave((settings) => {
-            settings.extraLabelPropertyName = newPropertyName;
+            settings.isTitlesModuleEnabled = newPropertyNames.length > 0;
+            // Left as it was on the way out, so switching the module off restores exactly what a fresh install has.
+            if (newPropertyNames.length > 0) {
+              settings.titlePropertyNames = newPropertyNames;
+            }
           });
         },
-        input: { pluginId: PLUGIN_ID, propertyName }
+        input: { pluginId: ADVANCED_METADATA_CACHE_PLUGIN_ID, propertyNames }
       });
     }
 
@@ -212,11 +220,11 @@ describe('The source flairs', () => {
       return flairs;
     }
 
-    await setExtraLabelPropertyName(TITLE_PROPERTY_NAME);
+    await setTitleProperties([TITLE_PROPERTY_NAME]);
     const mixedRowFlairs = await readFlairs(`${alpha}/${delta}/${foxtrot}`);
     const realNameRowFlairs = await readFlairs(`${alpha}/${bravo}/${charlie}`);
     // Left as it was found, because these suites share one Obsidian and one settings file.
-    await setExtraLabelPropertyName('');
+    await setTitleProperties([]);
 
     // In PATH order, so the markers read left to right in the same order as the labels they explain.
     expect(mixedRowFlairs).toHaveLength(2);

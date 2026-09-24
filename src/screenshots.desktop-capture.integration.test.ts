@@ -48,6 +48,9 @@ import {
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
+// The plugin that owns the title properties this switcher reads, and whose Titles module a frame switches on.
+const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
+
 const WIDTH_IN_PIXELS = 1200;
 const HEIGHT_IN_PIXELS = 800;
 
@@ -63,7 +66,7 @@ const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 
 /**
  * The frontmatter property frame 6 points the plugin at, and the value the staged `Charlie` carries under
- * it — a name the switcher can only reach while `extraLabelPropertyName` names that property.
+ * it — a name the switcher can only reach while Advanced Metadata Cache's Titles module reads that property.
  */
 const TITLE_PROPERTY_NAME = 'title';
 const TITLE_VALUE = 'India';
@@ -163,10 +166,10 @@ describe('desktop frames of the matched row', () => {
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
   it('6 - an alias and a frontmatter property on one row', async () => {
-    // The only frame that needs a setting: `extraLabelPropertyName` is empty by default, which is what
+    // The only frame that needs a setting: Advanced Metadata Cache's Titles module is off by default, which is what
     // frames 1-5 are taken under. Turned on here and put back afterwards, because these frames share one
     // Obsidian and one settings file.
-    await setExtraLabelPropertyName(TITLE_PROPERTY_NAME);
+    await setTitleProperties([TITLE_PROPERTY_NAME]);
 
     try {
       // `Delta` is the FOLDER's alias and `India` is the leaf's `title`, so this one row carries both
@@ -180,7 +183,7 @@ describe('desktop frames of the matched row', () => {
       // whole point of the frame is telling them apart.
       await shoot(6, 'An alias and a title, each with its own marker', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
     } finally {
-      await setExtraLabelPropertyName('');
+      await setTitleProperties([]);
     }
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
@@ -269,23 +272,25 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
- * Points the plugin at a frontmatter property, or at none.
+ * Points Advanced Metadata Cache's Titles module at frontmatter properties, or switches it off.
  *
  * Read structurally rather than asserted through `unknown`, the same way
  * `source-flairs.desktop.integration.test.ts` reaches it: this touches a member the plugin base keeps
  * protected, so a version that renamed it fails loudly here rather than at the first property access.
  *
- * @param propertyName - The property to treat as a name, or the empty string for `aliases` alone.
+ * @param propertyNames - The properties to treat as names, or none for `aliases` alone, which switches the Titles
+ * module off.
  */
-async function setExtraLabelPropertyName(propertyName: string): Promise<void> {
+async function setTitleProperties(propertyNames: string[]): Promise<void> {
   await evalInObsidian({
-    async callback({ app, pluginId, propertyName: newPropertyName }): Promise<void> {
+    async callback({ app, pluginId, propertyNames: newPropertyNames }): Promise<void> {
       interface SettingsEditor {
-        editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
+        editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
       }
 
-      interface SwitcherSettingsLike {
-        extraLabelPropertyName: string;
+      interface TitlesSettingsLike {
+        isTitlesModuleEnabled: boolean;
+        titlePropertyNames: string[];
       }
 
       const plugin = app.plugins.getPlugin(pluginId);
@@ -303,10 +308,14 @@ async function setExtraLabelPropertyName(propertyName: string): Promise<void> {
       }
 
       await (candidate as SettingsEditor).editAndSave((settings) => {
-        settings.extraLabelPropertyName = newPropertyName;
+        settings.isTitlesModuleEnabled = newPropertyNames.length > 0;
+        // Left as it was on the way out, so switching the module off restores exactly what a fresh install has.
+        if (newPropertyNames.length > 0) {
+          settings.titlePropertyNames = newPropertyNames;
+        }
       });
     },
-    input: { pluginId: PLUGIN_ID, propertyName },
+    input: { pluginId: ADVANCED_METADATA_CACHE_PLUGIN_ID, propertyNames },
     vaultPath: vaultPath()
   });
 }

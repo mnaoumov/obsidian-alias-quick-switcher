@@ -7,7 +7,7 @@ import type { PopulateFilesParams } from 'obsidian-integration-testing';
 export const PERFORMANCE_VAULT_FOLDER = 'big';
 
 /**
- * The alias on the folder note of {@link TARGET_FOLDER}, and the alias on the note inside it. Together they
+ * The alias on the folder note of {@link TARGET_FOLDER_NAME}, and the alias on the note inside it. Together they
  * make `<folder alias>/<note alias>` a query that ONLY this plugin can answer — which is what the latency
  * test measures, rather than a query the built-in could have served just as fast.
  */

@@ -35,7 +35,6 @@ interface BindOptionsExtension {
  */
 const EXPECTED_BOUND_KEYS: (keyof PluginSettings)[] = [
   'excludedPathPatterns',
-  'extraLabelPropertyName',
   'rankingMode',
   'recentFilesBoostCount',
   'segmentMatchMode',
@@ -119,9 +118,22 @@ describe('PluginSettingsTab', () => {
     expect(tab.containerEl.children.length).toBeGreaterThan(0);
   });
 
-  it('should declare one row per setting', () => {
+  it('should declare one row per setting, plus the one pointing at where the title properties live', () => {
     const tab = createTab();
-    expect(tab.getSettingDefinitions()).toHaveLength(EXPECTED_BOUND_KEYS.length);
+    expect(tab.getSettingDefinitions()).toHaveLength(EXPECTED_BOUND_KEYS.length + 1);
+  });
+
+  /*
+   * The title properties used to be a text field here. They belong to Advanced Metadata Cache now, so the row
+   * that replaced the field must SEND the user there rather than offer a second place to type `title`.
+   */
+  it('should point at Advanced Metadata Cache for the title properties, and offer no field for them', () => {
+    const tab = createTab();
+    const titleRow = tab.getSettingDefinitions().find((definition) => 'name' in definition && definition.name === 'Title properties');
+    expect(titleRow && 'desc' in titleRow ? titleRow.desc : undefined).toContain('Advanced Metadata Cache');
+
+    callDisplay(tab);
+    expect(getBoundKeys()).not.toContain('proposedTitlePropertyName');
   });
 
   it('should bind every setting exactly once', () => {

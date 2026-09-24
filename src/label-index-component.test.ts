@@ -1,11 +1,12 @@
 import type {
   App as AppOriginal,
+  Plugin as PluginOriginal,
   TFile
 } from 'obsidian';
-import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
+import { Component } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -15,8 +16,10 @@ import {
   it
 } from 'vitest';
 
+import type { AdvancedMetadataCacheApi } from './advanced-metadata-cache.ts';
+
+import { ADVANCED_METADATA_CACHE_PLUGIN_ID } from './advanced-metadata-cache.ts';
 import { LabelIndexComponent } from './label-index-component.ts';
-import { PluginSettings } from './plugin-settings.ts';
 
 const VAULT_FILES: Record<string, string> = {
   'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n',
@@ -32,16 +35,19 @@ const VAULT_FILES: Record<string, string> = {
 let app: AppOriginal;
 let appMock: App;
 let component: LabelIndexComponent;
-let settings: PluginSettings;
+let providerComponent: Component;
+
+/**
+ * What Advanced Metadata Cache's Titles module currently answers. A plain array the tests reassign, standing in
+ * for that plugin's own settings.
+ */
+let titlePropertyNames: string[];
 
 beforeEach(() => {
   appMock = App.createConfigured__({ files: VAULT_FILES });
   app = appMock.asOriginalType__();
-  settings = new PluginSettings();
-  component = new LabelIndexComponent({
-    app,
-    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings })
-  });
+  titlePropertyNames = [];
+  component = new LabelIndexComponent({ app });
   component.load();
 });
 
@@ -92,14 +98,39 @@ describe('LabelIndexComponent', () => {
   });
 
   describe('refresh', () => {
-    it('should adopt an extra label property the user has since named', () => {
+    it('should read no title properties while the plugin that owns them has published nothing', () => {
       appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { title: 'Kilo' } });
+
+      component.refresh();
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
+    });
+
+    it('should adopt the title properties the other plugin has since been configured with', () => {
+      publishAdvancedMetadataCacheApi();
+      appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { title: 'Kilo' } });
+      component.refresh();
       expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
 
-      settings.extraLabelPropertyName = 'title';
+      // Read LIVE on every open rather than copied at load: a user reconfiguring the other plugin is seen by the
+      // next switcher, with nothing of it stored in this plugin.
+      titlePropertyNames = ['title'];
       component.refresh();
 
       expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Kilo']);
+    });
+
+    it('should fall back to aliases alone once the other plugin withdraws its API', () => {
+      publishAdvancedMetadataCacheApi();
+      titlePropertyNames = ['title'];
+      appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { title: 'Kilo' } });
+      component.refresh();
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Kilo']);
+
+      providerComponent.unload();
+      component.refresh();
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
     });
 
     it('should re-resolve the folder-note setup, so reconfiguring the other plugin needs no migration', () => {
@@ -127,6 +158,22 @@ function labelTextsOfFile(path: string): string[] {
 
 function labelTextsOfFolder(path: string): string[] {
   return component.labelIndex.getFolderLabels(ensureNonNullable(app.vault.getFolderByPath(path), `Missing fixture folder ${path}`)).map((label) => label.text);
+}
+
+/**
+ * Publishes a stand-in for Advanced Metadata Cache's API, answering from {@link titlePropertyNames} at call time.
+ */
+function publishAdvancedMetadataCacheApi(): void {
+  providerComponent = new Component();
+  providerComponent.load();
+  publishPluginApi<Pick<AdvancedMetadataCacheApi, 'getTitlePropertyNames'>>({
+    api: {
+      getTitlePropertyNames: (): string[] => [...titlePropertyNames]
+    },
+    apiVersion: '1.0.0',
+    component: providerComponent,
+    plugin: castTo<PluginOriginal>({ manifest: { id: ADVANCED_METADATA_CACHE_PLUGIN_ID } })
+  });
 }
 
 /**

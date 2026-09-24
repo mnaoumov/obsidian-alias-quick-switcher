@@ -41,7 +41,7 @@ beforeEach(() => {
   appMock = App.createConfigured__({ files: VAULT_FILES });
   app = appMock.asOriginalType__();
   resolveNameCallCount = 0;
-  labelIndex = new LabelIndex({ app, extraLabelPropertyName: '', folderNoteConfig: buildCountingConfig() });
+  labelIndex = new LabelIndex({ app, folderNoteConfig: buildCountingConfig(), titlePropertyNames: [] });
 });
 
 describe('getFileLabels', () => {
@@ -82,13 +82,13 @@ describe('getFolderLabels', () => {
   });
 });
 
-describe('the extra label property', () => {
-  it('should be ignored while it is empty, even when the property is present', () => {
+describe('the title properties', () => {
+  it('should be ignored while the list is empty, even when the property is present', () => {
     expect(labelsOfFile('Alpha/Bravo/Charlie.md').map((label) => label.text)).not.toContain('Foxtrot');
   });
 
   it('should add the property value as a label once it is named', () => {
-    labelIndex.setExtraLabelPropertyName('title');
+    labelIndex.setTitlePropertyNames(['title']);
     expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
       realNameLabel('Charlie'),
       aliasLabel('Echo'),
@@ -102,7 +102,7 @@ describe('the extra label property', () => {
    * own vault. Ranking and the row shape read `checkIsAliasLike` instead, so neither can tell the two apart.
    */
   it('should stamp an alias and a property value with different sources', () => {
-    labelIndex.setExtraLabelPropertyName('title');
+    labelIndex.setTitlePropertyNames(['title']);
     expect(labelsOfFile('Alpha/Bravo/Charlie.md').map((label) => label.source)).toStrictEqual([
       { kind: LabelSourceKind.RealName },
       { kind: LabelSourceKind.Alias },
@@ -112,7 +112,7 @@ describe('the extra label property', () => {
 
   it('should accept a list of values as well as a single one', () => {
     app.vault.getFileByPath('Alpha/Bravo/Golf.md');
-    labelIndex.setExtraLabelPropertyName('nicknames');
+    labelIndex.setTitlePropertyNames(['nicknames']);
     appMock.metadataCache.cache__.set('Alpha/Bravo/Golf.md', { frontmatter: { nicknames: ['Kilo', 'Lima', 7, ''] } });
     expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([
       realNameLabel('Golf'),
@@ -121,15 +121,40 @@ describe('the extra label property', () => {
     ]);
   });
 
+  it('should read every listed property, in list order, each stamped with its own key', () => {
+    labelIndex.setTitlePropertyNames(['nicknames', 'title']);
+    appMock.metadataCache.cache__.set('Alpha/Bravo/Golf.md', { frontmatter: { nicknames: 'Kilo', title: 'Lima' } });
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([
+      realNameLabel('Golf'),
+      propertyLabel('nicknames', 'Kilo'),
+      propertyLabel('title', 'Lima')
+    ]);
+  });
+
+  it('should drop a value one property repeats from another, keeping the key it came from first', () => {
+    labelIndex.setTitlePropertyNames(['nicknames', 'title']);
+    appMock.metadataCache.cache__.set('Alpha/Bravo/Golf.md', { frontmatter: { nicknames: 'Kilo', title: 'KILO' } });
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([
+      realNameLabel('Golf'),
+      propertyLabel('nicknames', 'Kilo')
+    ]);
+  });
+
   it('should forget every memoized answer when it changes, and nothing when it does not', () => {
     labelsOfFolder('Alpha/Bravo');
     const callCountAfterFirstAnswer = resolveNameCallCount;
 
-    labelIndex.setExtraLabelPropertyName('');
+    labelIndex.setTitlePropertyNames([]);
     labelsOfFolder('Alpha/Bravo');
     expect(resolveNameCallCount).toBe(callCountAfterFirstAnswer);
 
-    labelIndex.setExtraLabelPropertyName('title');
+    labelIndex.setTitlePropertyNames(['title']);
+    labelsOfFolder('Alpha/Bravo');
+    expect(resolveNameCallCount).toBe(callCountAfterFirstAnswer + 1);
+
+    // A fresh array with the same contents, which is what every switcher open hands over: the list is re-read
+    // from the other plugin each time, and must not throw the index away when nothing in it changed.
+    labelIndex.setTitlePropertyNames(['title']);
     labelsOfFolder('Alpha/Bravo');
     expect(resolveNameCallCount).toBe(callCountAfterFirstAnswer + 1);
   });

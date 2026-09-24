@@ -23,9 +23,9 @@ describe('PluginSettings', () => {
     expect(settings.shouldIncludeNonMarkdownFiles).toBe(false);
   });
 
-  it('should consult only aliases until an extra label property is named', () => {
+  it('should have nothing waiting to be handed over on a fresh install', () => {
     const settings = new PluginSettings();
-    expect(settings.extraLabelPropertyName).toBe('');
+    expect(settings.proposedTitlePropertyName).toBeNull();
   });
 
   it('should default the recency tiebreak to a finite, usable size', () => {

@@ -12,11 +12,32 @@ interface PluginSettingsComponentConstructorParams {
   readonly pluginEventSource: PluginEventSource;
 }
 
+/**
+ * The settings this plugin no longer has, as they were last written to `data.json`.
+ */
+class LegacySettings {
+  /**
+   * The single extra label property, retired when Advanced Metadata Cache's `Titles` module took the setting over.
+   */
+  public extraLabelPropertyName = '';
+}
+
 export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginSettings> {
   public constructor(params: PluginSettingsComponentConstructorParams) {
     super({
       ...params,
       pluginSettingsClass: PluginSettings
+    });
+  }
+
+  protected override registerLegacySettingsConverters(): void {
+    super.registerLegacySettingsConverters();
+    // The retired value is parked rather than dropped: it is the user's own configuration, and dropping it would
+    // leave them to discover that a title they relied on stopped matching, and to re-type it in the other plugin.
+    this.registerLegacySettingsConverter(LegacySettings, (legacySettings) => {
+      if (legacySettings.extraLabelPropertyName) {
+        legacySettings.proposedTitlePropertyName = legacySettings.extraLabelPropertyName;
+      }
     });
   }
 

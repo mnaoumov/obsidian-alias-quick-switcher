@@ -60,9 +60,15 @@ Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo`
 
 **Every row tells you why it matched, in the switcher's own visual language.** A hit reached through a folder alias is rendered as what you typed — `Alpha/Delta/Echo` — with the real path, `Alpha/Bravo/Charlie`, underneath it and the same alias marker Obsidian already puts on an alias hit. A row matched by real names alone shows one line, because there is nothing to explain. And a plain alias on the note itself looks exactly as it does in the built-in switcher, because it is the same row — this plugin extends that shape to the rest of the path rather than inventing a second one to learn.
 
-**A name that is not an alias says so.** Point the `Extra label property` setting at a frontmatter property — `title`, say — and its value becomes another name a note answers to, ranked and rendered exactly as an alias is. The marker on the row is what tells them apart, using Obsidian's own property icons: the alias arrow for `aliases`, the text glyph for a property, with the property's key in the tooltip. A row reached through both carries both markers, in the order the names appear in the path. (On a phone, touch and hold a marker for a second to see its tooltip.)
+**A name that is not an alias says so.** Turn on the Titles module of [Advanced Metadata Cache](https://github.com/mnaoumov/obsidian-advanced-metadata-cache) and the value of each frontmatter property it lists — `title` by default — becomes another name a note answers to, ranked and rendered exactly as an alias is. The list lives in that plugin rather than in this one, so every plugin that reads titles agrees on it and you type `title` in one place. The marker on the row is what tells them apart, using Obsidian's own property icons: the alias arrow for `aliases`, the text glyph for a property, with the property's key in the tooltip. A row reached through both carries both markers, in the order the names appear in the path. (On a phone, touch and hold a marker for a second to see its tooltip.)
 
 **Real names outrank aliases.** A result matched entirely by real names ranks above one that needed an alias, so the plugin never reorders the matches you already get today. That is the default ranking; the other one treats an alias as just another name and orders purely by how well the query matched, which surfaces alias hits sooner and gives that guarantee up. Both are a setting, as is whether a segment has to match as one unbroken run or only as characters in order.
+
+## Requirements
+
+This plugin requires [Advanced Metadata Cache](https://github.com/mnaoumov/obsidian-advanced-metadata-cache): it loads nothing until that plugin is installed and enabled, says why, and installs it in one click. It is required rather than optional because this switcher's whole design is a lookup index, and that plugin exists to keep the vault's metadata lookups indexed. Installing it changes nothing about what the switcher matches on its own: its Titles module is off until you turn it on.
+
+An `Extra label property` you configured in an earlier version is not lost. It is kept, and offered to Advanced Metadata Cache as soon as a version of it that accepts settings from other plugins is installed; you approve it in that plugin's own dialog.
 
 ## Usage
 

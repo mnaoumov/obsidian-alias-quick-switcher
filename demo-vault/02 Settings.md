@@ -13,9 +13,10 @@ Open **Settings -> Community plugins -> Alias Quick Switcher** to see the settin
 
 ## What counts as a name
 
-- `extraLabelPropertyName`
-  - an extra frontmatter property treated as a label alongside `aliases`, so a note or a folder note can be reached by a display title that is not an alias. Leave it empty to consult only `aliases`, which is what Obsidian itself considers an alias. Demonstrated, on a note this vault already ships, in [04 Extra names](<./04 Extra names.md>).
-  - a name read from this property ranks and renders exactly as an alias does — the only difference is the marker on the row. An alias gets Obsidian's alias arrow; a property gets its text glyph, with the property's key as the tooltip, so a `title` is never reported to you as an alias. Hover a marker on the desktop, or touch and hold it for a second on a phone. A row reached through both an alias and a property carries both markers, in the order those names appear in the path.
+- Title properties are not a setting of this plugin. They belong to the **Titles** module of **Advanced Metadata Cache**, the plugin this switcher depends on, so every plugin that reads titles agrees on which properties they are and you type `title` in one place. Turn the module on in **Settings -> Community plugins -> Advanced Metadata Cache**; its property list defaults to `title`. Demonstrated, on a note this vault already ships, in [04 Extra names](<./04 Extra names.md>).
+  - a name read from a title property ranks and renders exactly as an alias does — the only difference is the marker on the row. An alias gets Obsidian's alias arrow; a property gets its text glyph, with the property's key as the tooltip, so a `title` is never reported to you as an alias. Hover a marker on the desktop, or touch and hold it for a second on a phone. A row reached through both an alias and a property carries both markers, in the order those names appear in the path.
+- `proposedTitlePropertyName`
+  - not a setting you edit. Earlier versions of this plugin had an `extraLabelPropertyName` setting of their own; a value you had configured there is kept under this key, and offered to Advanced Metadata Cache once a version of it that accepts settings from other plugins is installed. You approve it in that plugin's own dialog, and only then is this key cleared. Empty on a fresh install, since there is nothing to hand over.
 
 ## Algorithms
 

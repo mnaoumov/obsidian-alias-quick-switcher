@@ -7,6 +7,12 @@ import { getRootFolder } from 'obsidian-dev-utils/script-utils/root';
 import { buildDemoVaultPopulateAsync } from 'obsidian-integration-testing';
 import { createSetup } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 
+import {
+  ADVANCED_METADATA_CACHE_PLUGIN_ID,
+  ADVANCED_METADATA_CACHE_REPO,
+  ADVANCED_METADATA_CACHE_VERSION
+} from './helpers/advanced-metadata-cache-seed.ts';
+
 // CodeScript Toolkit is what turns a ```code-button fence into a button, and its root-relative
 // `require('/demoSetup.ts')` into a call. In real use the in-vault `demo-vault-helper` installs it from
 // the community registry on first launch — a GUI step, and `.obsidian/plugins/*` is gitignored, so the
@@ -28,10 +34,21 @@ const CODE_SCRIPT_TOOLKIT_SETTINGS = {
 async function populate(): Promise<PopulateFilesParams> {
   return await buildDemoVaultPopulateAsync({
     demoVaultPath: join(getRootFolder() ?? process.cwd(), 'demo-vault'),
-    injectPlugins: [{
-      data: CODE_SCRIPT_TOOLKIT_SETTINGS,
-      pluginId: CODE_SCRIPT_TOOLKIT_PLUGIN_ID
-    }]
+    injectPlugins: [
+      {
+        data: CODE_SCRIPT_TOOLKIT_SETTINGS,
+        pluginId: CODE_SCRIPT_TOOLKIT_PLUGIN_ID
+      },
+      // The dependency, which this plugin loads nothing without. Named by repository and pinned, rather than
+      // resolved through the community registry the way CodeScript Toolkit is: the seeded copy must be the
+      // same release every other project seeds. The vault's own startup script then finds it installed and
+      // leaves it alone.
+      {
+        pluginId: ADVANCED_METADATA_CACHE_PLUGIN_ID,
+        repo: ADVANCED_METADATA_CACHE_REPO,
+        version: ADVANCED_METADATA_CACHE_VERSION
+      }
+    ]
   });
 }
 
@@ -39,7 +56,7 @@ async function populate(): Promise<PopulateFilesParams> {
 // before Obsidian opens, so the startup scan indexes every note in one pass. Used by
 // `integration-tests:demo-vault`.
 const { setup, teardown } = createSetup({
-  enableCommunityPlugins: [CODE_SCRIPT_TOOLKIT_PLUGIN_ID],
+  enableCommunityPlugins: [ADVANCED_METADATA_CACHE_PLUGIN_ID, CODE_SCRIPT_TOOLKIT_PLUGIN_ID],
   populate
 });
 

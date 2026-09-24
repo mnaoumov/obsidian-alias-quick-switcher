@@ -4,6 +4,9 @@ import { Notice } from 'obsidian';
 
 const PLUGIN_ID = 'alias-quick-switcher';
 
+// The plugin that owns the title properties this switcher reads.
+const TITLES_PLUGIN_ID = 'advanced-metadata-cache';
+
 const SWITCHER_COMMAND_ID = 'open';
 const SWITCHER_INPUT_SELECTOR = '.alias-quick-switcher-modal .prompt-input';
 
@@ -68,6 +71,29 @@ export async function setSetting(app: App, propertyName: string, value: unknown)
     settings[propertyName] = value;
   });
   new Notice(`${propertyName} is now ${String(value)}`);
+}
+
+/**
+ * Switches Advanced Metadata Cache's Titles module on or off, so a note can demonstrate a title property
+ * without sending the reader to that plugin's settings tab and back.
+ *
+ * The property list itself is left alone: it defaults to `title`, which is the property this vault's
+ * fixture carries, and a reader who has already changed it meant to.
+ *
+ * Manual equivalent: Settings -> Community plugins -> Advanced Metadata Cache, the Titles module toggle.
+ */
+export async function setTitlesModuleEnabled(app: App, isEnabled: boolean): Promise<void> {
+  const plugin = app.plugins.getPlugin(TITLES_PLUGIN_ID);
+  if (!plugin) {
+    new Notice(`Plugin ${TITLES_PLUGIN_ID} is not enabled`);
+    return;
+  }
+
+  const settingsComponent = (plugin as unknown as SettingsComponentHolder).pluginSettingsComponent;
+  await settingsComponent.editAndSave((settings: Record<string, unknown>) => {
+    settings['isTitlesModuleEnabled'] = isEnabled;
+  });
+  new Notice(`The Titles module is now ${isEnabled ? 'on' : 'off'}`);
 }
 
 interface SettingsComponentHolder {

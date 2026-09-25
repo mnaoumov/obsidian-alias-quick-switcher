@@ -291,12 +291,14 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     // needs no rule in this plugin's stylesheet.
     const flairs = collectSourceFlairs(suggestion);
 
-    if (flairs.length > 0) {
-      const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+    if (flairs.length === 0) {
+      return;
+    }
 
-      for (const flair of flairs) {
-        setIcon(auxEl.createSpan({ attr: { 'aria-label': flair.ariaLabel }, cls: 'suggestion-flair' }), flair.iconId);
-      }
+    const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+
+    for (const flair of flairs) {
+      setIcon(auxEl.createSpan({ attr: { 'aria-label': flair.ariaLabel }, cls: 'suggestion-flair' }), flair.iconId);
     }
   }
 
@@ -401,10 +403,12 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     for (const path of this.app.workspace.recentFileTracker.lastOpenFiles) {
       const candidate = this.candidatesByPath.get(path);
 
-      if (candidate && !seenPaths.has(path)) {
-        seenPaths.add(path);
-        suggestions.push({ candidate, match: null, path: candidate.path });
+      if (!candidate || seenPaths.has(path)) {
+        continue;
       }
+
+      seenPaths.add(path);
+      suggestions.push({ candidate, match: null, path: candidate.path });
     }
 
     return suggestions;
@@ -558,11 +562,8 @@ function checkIsLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
 
   // Read off `match.positions` rather than the candidate's, so a leaf satisfied by its REAL name — where
   // the rendering is already the plain path and there is nothing to explain — is not caught by this.
-  if (!leafMatch || !checkIsAliasLike(leafMatch.source)) {
-    return false;
-  }
-
-  return suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
+  return leafMatch !== undefined && leafMatch !== null && checkIsAliasLike(leafMatch.source)
+    && suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
 }
 
 function checkSubsequence(haystack: string, token: string): boolean {
@@ -612,10 +613,12 @@ function collectSourceFlairs(suggestion: Suggestion): SourceFlair[] {
 
     const key = `${flair.iconId}\n${flair.ariaLabel}`;
 
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      flairs.push(flair);
+    if (seenKeys.has(key)) {
+      continue;
     }
+
+    seenKeys.add(key);
+    flairs.push(flair);
   }
 
   return flairs;

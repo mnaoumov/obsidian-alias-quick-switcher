@@ -40,12 +40,10 @@ import {
   captureDeviceScreenshot,
   evalInObsidian,
   labelScreenshot,
-  parseInputMethodState,
   pollInObsidian,
   raiseSoftKeyboard,
   readPngDimensions,
   resolveEmulatorDeviceId,
-  runAdbText,
   withSoftKeyboardEnabled
 } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
@@ -91,13 +89,6 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 600_000;
 
 const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
 const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
-const KEYBOARD_RETRACT_DELAY_IN_MILLISECONDS = 900;
-
-/**
- * The flag `dumpsys input_method` sets while an IME is showing. Nothing in the page reports the keyboard,
- * so the device's own answer is the only one there is.
- */
-const INPUT_SHOWN_STATE = 'mInputShown=true';
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
@@ -126,11 +117,8 @@ beforeAll(async () => {
     poll({ app }): boolean {
       const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
       const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-      if (!folderNote || !leaf) {
-        return false;
-      }
-
-      return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+      return folderNote !== null && leaf !== null
+        && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
         && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
     start({ app }): void {
@@ -198,51 +186,6 @@ describe('mobile frames of the matched row', () => {
     }
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
-
-/**
- * Asks the DEVICE whether an IME is showing, since nothing in the page reports one.
- *
- * @returns A {@link Promise} that resolves to whether the soft keyboard is up.
- */
-async function checkIsSoftKeyboardShown(): Promise<boolean> {
-  const dump = await runAdbText({
-    commandArguments: ['shell', 'dumpsys', 'input_method'],
-    deviceId
-  });
-
-  return parseInputMethodState(dump).includes(INPUT_SHOWN_STATE);
-}
-
-/**
- * Puts the soft keyboard down if one is up, so the raise that follows has a field that has not moved yet
- * to measure against.
- *
- * `KEYCODE_BACK` is what Android defines for this: a showing IME consumes the key and retracts, and the
- * app behind it never sees it — which is why this cannot close the switcher instead. The device is asked
- * FIRST for exactly that reason: with no IME showing, the same key would reach the app and close the
- * switcher this frame is about to photograph.
- *
- * It fails here rather than leaving {@link raiseSoftKeyboard} to fail: a keyboard that is already up makes
- * that call report `the keyboard did not come up` about a keyboard that is up, which is the most
- * misleading error this suite can produce.
- */
-async function lowerSoftKeyboard(): Promise<void> {
-  if (!await checkIsSoftKeyboardShown()) {
-    return;
-  }
-
-  await pressBackAndSettle();
-  if (!await checkIsSoftKeyboardShown()) {
-    return;
-  }
-
-  // One retry, because the first BACK can land while the IME is still animating up from the focus that
-  // raised it, and an IME mid-animation swallows it without retracting.
-  await pressBackAndSettle();
-  if (await checkIsSoftKeyboardShown()) {
-    throw new Error('The soft keyboard would not retract, so the raise that follows could not prove anything.');
-  }
-}
 
 /**
  * Opens the switcher, types a query, and leaves it on screen for the capture.
@@ -321,18 +264,6 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
- * Presses BACK on the device and gives the IME time to finish retracting.
- */
-async function pressBackAndSettle(): Promise<void> {
-  await runAdbText({
-    commandArguments: ['shell', 'input', 'keyevent', 'KEYCODE_BACK'],
-    deviceId
-  });
-
-  await sleepInNode(KEYBOARD_RETRACT_DELAY_IN_MILLISECONDS);
-}
-
-/**
  * Points Advanced Metadata Cache's Titles module at frontmatter properties, or switches it off.
  *
  * Read structurally rather than asserted through `unknown`, the same way
@@ -394,20 +325,9 @@ async function setTitleProperties(propertyNames: string[]): Promise<void> {
  * Two things are needed and both are easy to miss, which is why they are the harness's job rather than
  * this file's: the AVD is built `hw.keyboard=yes`, so Android suppresses the on-screen keyboard until
  * `withSoftKeyboardEnabled` lifts that; and a WebView does not ask for an IME on programmatic focus
- * alone, so `raiseSoftKeyboard` puts a real touch on the field and proves it came up.
- *
- * The frame starts by putting any keyboard already up back DOWN, and that is what makes a suite of
- * several frames possible at all. `raiseSoftKeyboard` proves the lift as a DELTA against a baseline read
- * just before its touch, so a keyboard that is already up reads as a field that never moved — the blind
- * spot its own diagnostic names. Measured here on 2026-09-20: frame 1 passed and frames 2-5 all failed
- * `the keyboard did not come up` with `lift=0` while the device reported `mInputShown=true`, and the
- * failure framebuffer showed a correctly lifted field under a fully drawn keyboard. Lowering it first
- * keeps every frame's proof honest instead of teaching the suite to accept an unproved one.
- *
- * It has to happen HERE rather than after the previous capture, which was tried first and did not work:
- * the IME comes back on its own when {@link openSwitcher} opens the next switcher and Obsidian focuses
- * its field, so a keyboard lowered at the end of the previous frame is up again before this frame's
- * baseline is read.
+ * alone, so `raiseSoftKeyboard` puts a real touch on the field and proves it came up. It also puts down a
+ * keyboard still up from the previous frame before it reads its baseline, which is what lets one suite
+ * take several frames in a row.
  *
  * @param index - The 1-based listing position.
  * @param caption - The caption drawn across the bottom of the frame.
@@ -415,8 +335,6 @@ async function setTitleProperties(propertyNames: string[]): Promise<void> {
 async function shoot(index: number, caption: string): Promise<void> {
   const bytes = await withSoftKeyboardEnabled({
     async callback() {
-      await lowerSoftKeyboard();
-
       await raiseSoftKeyboard({
         deviceId,
         inputSelector: INPUT_SELECTOR,

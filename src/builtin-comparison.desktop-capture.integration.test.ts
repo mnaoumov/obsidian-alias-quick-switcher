@@ -69,11 +69,7 @@ beforeAll(async () => {
   await pollInObsidian({
     poll({ app }): boolean {
       const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-      if (!leaf) {
-        return false;
-      }
-
-      return Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
+      return leaf !== null && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
     start({ app }): void {
       app.changeTheme('obsidian');

@@ -43,6 +43,8 @@ const PLUGIN_ID = 'alias-quick-switcher';
 
 const BUILT_IN_COMMAND_ID = 'switcher:open';
 
+const NOTICE_SELECTOR = '.notice';
+
 const WIDTH_IN_PIXELS = 900;
 const HEIGHT_IN_PIXELS = 520;
 
@@ -51,6 +53,7 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
 const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
 const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
+const NOTICE_REPAINT_DELAY_IN_MILLISECONDS = 500;
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
@@ -67,16 +70,21 @@ beforeAll(async () => {
   await vault.syncToDevice();
 
   await pollInObsidian({
-    poll({ app }): boolean {
+    input: { pluginId: PLUGIN_ID },
+    poll({ app, pluginId }): boolean {
       const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-      return leaf !== null && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
+      // The dependency gate registers the plugin's commands only once it opens. The first frame is the
+      // BUILT-IN switcher, which never runs this plugin's command, so this wait is the only thing proving the
+      // gate's startup notice has already fired before `shoot()` clears it.
+      return app.commands.findCommand(`${pluginId}:open`) !== undefined
+        && leaf !== null && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
     start({ app }): void {
       app.changeTheme('obsidian');
       app.workspace.leftSplit.collapse();
     },
     timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
-    timeoutMessage: 'the leaf alias never reached the metadata cache',
+    timeoutMessage: 'the dependency gate never opened, or the leaf alias never reached the metadata cache',
     until: (isCached: boolean): boolean => isCached,
     vaultPath: vaultPath()
   });
@@ -106,6 +114,28 @@ describe('the built-in switcher and this one, on the same match', () => {
     await shoot('plugin-path', 'This plugin: Alpha/Delta/Echo');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
+
+/**
+ * Removes every notice on screen and lets the window repaint without it.
+ *
+ * The integration vault enables Advanced Metadata Cache AFTER this plugin on purpose, so the dependency gate
+ * raises its "does nothing until" notice at startup, and a frame taken inside that notice's lifetime
+ * photographs it. `beforeAll` has already waited for the gate to open, so a notice removed here does not
+ * come back.
+ */
+async function dismissNotices(): Promise<void> {
+  await evalInObsidian({
+    callback({ noticeSelector }): void {
+      for (const noticeEl of document.querySelectorAll(noticeSelector)) {
+        noticeEl.remove();
+      }
+    },
+    input: { noticeSelector: NOTICE_SELECTOR },
+    vaultPath: vaultPath()
+  });
+
+  await sleepInNode(NOTICE_REPAINT_DELAY_IN_MILLISECONDS);
+}
 
 /**
  * Opens a switcher, types a query, and leaves it on screen for the capture.
@@ -191,6 +221,8 @@ async function openSwitcher(commandId: string, modalSelector: string, query: str
  * @param caption - The caption drawn across the bottom of the frame.
  */
 async function shoot(name: string, caption: string): Promise<void> {
+  await dismissNotices();
+
   const bytes = await captureObsidianScreenshot({
     heightInPixels: HEIGHT_IN_PIXELS,
     vaultPath: vaultPath(),

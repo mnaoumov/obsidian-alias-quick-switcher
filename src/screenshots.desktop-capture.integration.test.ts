@@ -98,11 +98,8 @@ beforeAll(async () => {
     poll({ app }): boolean {
       const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
       const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-      if (!folderNote || !leaf) {
-        return false;
-      }
-
-      return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+      return folderNote !== null && leaf !== null
+        && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
         && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
     start({ app }): void {

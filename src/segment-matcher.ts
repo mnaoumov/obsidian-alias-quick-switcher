@@ -618,11 +618,7 @@ export function checkIsAliasLike(source: LabelSource): boolean {
  *   dump of the vault.
  */
 export function matchPath(params: MatchPathParams): null | PathMatch {
-  if (params.tokens.length === 0 || params.positions.length === 0) {
-    return null;
-  }
-
-  return new PathMatcher(params).match();
+  return params.tokens.length === 0 || params.positions.length === 0 ? null : new PathMatcher(params).match();
 }
 
 /**

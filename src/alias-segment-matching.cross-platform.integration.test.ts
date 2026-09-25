@@ -48,11 +48,8 @@ describe('Matching an alias in every path segment', () => {
       poll({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName }): boolean {
         const folderNote = app.vault.getFileByPath(`${alphaName}/${bravoName}/${bravoName}.md`);
         const leaf = app.vault.getFileByPath(`${alphaName}/${bravoName}/${charlieName}.md`);
-        if (!folderNote || !leaf) {
-          return false;
-        }
-
-        return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+        return folderNote !== null && leaf !== null
+          && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
           && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
       },
       async start({ alpha: alphaName, app, bravo: bravoName, charlie: charlieName, delta: deltaAlias, echo: echoAlias }): Promise<void> {

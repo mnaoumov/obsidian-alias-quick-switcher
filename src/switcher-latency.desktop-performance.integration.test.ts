@@ -99,11 +99,8 @@ describe('Per-keystroke latency at real scale', () => {
       poll({ app, targetFolderNotePath, targetNotePath }): boolean {
         const folderNote = app.vault.getFileByPath(targetFolderNotePath);
         const target = app.vault.getFileByPath(targetNotePath);
-        if (!folderNote || !target) {
-          return false;
-        }
-
-        return Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
+        return folderNote !== null && target !== null
+          && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
           && Boolean(app.metadataCache.getFileCache(target)?.frontmatter);
       },
       timeoutInMilliseconds: INDEX_TIMEOUT_IN_MILLISECONDS,

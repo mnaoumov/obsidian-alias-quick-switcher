@@ -64,6 +64,8 @@ const CLOSE_UP_HEIGHT_IN_PIXELS = 460;
 
 const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 
+const NOTICE_SELECTOR = '.notice';
+
 /**
  * The frontmatter property frame 6 points the plugin at, and the value the staged `Charlie` carries under
  * it — a name the switcher can only reach while Advanced Metadata Cache's Titles module reads that property.
@@ -76,6 +78,7 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
 const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
 const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
+const NOTICE_REPAINT_DELAY_IN_MILLISECONDS = 500;
 
 const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
@@ -95,10 +98,14 @@ beforeAll(async () => {
   await vault.syncToDevice();
 
   await pollInObsidian({
-    poll({ app }): boolean {
+    input: { pluginId: PLUGIN_ID },
+    poll({ app, pluginId }): boolean {
       const folderNote = app.vault.getFileByPath('Alpha/Bravo/Bravo.md');
       const leaf = app.vault.getFileByPath('Alpha/Bravo/Charlie.md');
-      return folderNote !== null && leaf !== null
+      // The dependency gate registers the plugin's commands only once it opens. Waiting for one here is what
+      // lets `shoot()` clear the gate's startup notice for good: nothing raises it again once the gate is open.
+      return app.commands.findCommand(`${pluginId}:open`) !== undefined
+        && folderNote !== null && leaf !== null
         && Boolean(app.metadataCache.getFileCache(folderNote)?.frontmatter)
         && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
@@ -110,7 +117,7 @@ beforeAll(async () => {
       app.workspace.leftSplit.collapse();
     },
     timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS,
-    timeoutMessage: 'both aliases never reached the metadata cache',
+    timeoutMessage: 'the dependency gate never opened, or both aliases never reached the metadata cache',
     until: (areCached: boolean): boolean => areCached,
     vaultPath: vaultPath()
   });
@@ -184,6 +191,28 @@ describe('desktop frames of the matched row', () => {
     }
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
+
+/**
+ * Removes every notice on screen and lets the window repaint without it.
+ *
+ * The integration vault enables Advanced Metadata Cache AFTER this plugin on purpose, so the dependency gate
+ * raises its "does nothing until" notice at startup, and a frame taken inside that notice's lifetime
+ * photographs it. `beforeAll` has already waited for the gate to open, so a notice removed here does not
+ * come back.
+ */
+async function dismissNotices(): Promise<void> {
+  await evalInObsidian({
+    callback({ noticeSelector }): void {
+      for (const noticeEl of document.querySelectorAll(noticeSelector)) {
+        noticeEl.remove();
+      }
+    },
+    input: { noticeSelector: NOTICE_SELECTOR },
+    vaultPath: vaultPath()
+  });
+
+  await sleepInNode(NOTICE_REPAINT_DELAY_IN_MILLISECONDS);
+}
 
 /**
  * Opens the switcher, types a query, and leaves it on screen for the capture.
@@ -327,6 +356,8 @@ async function setTitleProperties(propertyNames: string[]): Promise<void> {
  * @param heightInPixels - The window height to capture at.
  */
 async function shoot(index: number, caption: string, widthInPixels: number, heightInPixels: number): Promise<void> {
+  await dismissNotices();
+
   const bytes = await captureObsidianScreenshot({
     heightInPixels,
     vaultPath: vaultPath(),

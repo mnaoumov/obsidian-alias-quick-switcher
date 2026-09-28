@@ -32,6 +32,7 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { setTimeout as sleepInNode } from 'node:timers/promises';
 import {
+  applyObsidianTheme,
   captureObsidianScreenshot,
   evalInObsidian,
   labelScreenshot,
@@ -76,7 +77,6 @@ const TITLE_VALUE = 'India';
 const WAIT_TIMEOUT_IN_MILLISECONDS = 60_000;
 const TEST_TIMEOUT_IN_MILLISECONDS = 300_000;
 
-const THEME_SETTLE_DELAY_IN_MILLISECONDS = 1000;
 const ROW_SETTLE_DELAY_IN_MILLISECONDS = 900;
 const NOTICE_REPAINT_DELAY_IN_MILLISECONDS = 500;
 
@@ -110,8 +110,6 @@ beforeAll(async () => {
         && Boolean(app.metadataCache.getFileCache(leaf)?.frontmatter);
     },
     start({ app }): void {
-      app.changeTheme('obsidian');
-
       // The switcher is the subject, not the file explorer, so the sidebar is collapsed to give the modal
       // the frame.
       app.workspace.leftSplit.collapse();
@@ -122,7 +120,10 @@ beforeAll(async () => {
     vaultPath: vaultPath()
   });
 
-  await sleepInNode(THEME_SETTLE_DELAY_IN_MILLISECONDS);
+  // Not a bare `app.changeTheme('obsidian')`: that only schedules the config save, so a config reload landing
+  // first drops the theme and every frame comes out light. This saves at once, waits until the theme is on
+  // screen and on disk, and makes `captureObsidianScreenshot` refuse any frame shot after the theme was lost.
+  await applyObsidianTheme({ theme: 'dark', vaultPath: vaultPath() });
 }, TEST_TIMEOUT_IN_MILLISECONDS);
 
 describe('desktop frames of the matched row', () => {

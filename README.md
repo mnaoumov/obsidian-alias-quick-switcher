@@ -68,7 +68,7 @@ Take `Alpha/Bravo/Charlie.md`, where `Charlie` is aliased `Echo` and the `Bravo`
 
 This plugin requires [Advanced Metadata Cache](https://github.com/mnaoumov/obsidian-advanced-metadata-cache): it loads nothing until that plugin is installed and enabled, says why, and installs it in one click. It is required rather than optional because this switcher's whole design is a lookup index, and that plugin exists to keep the vault's metadata lookups indexed. Installing it changes nothing about what the switcher matches on its own: its Titles module is off until you turn it on.
 
-An `Extra label property` you configured in an earlier version is not lost. It is kept, and offered to Advanced Metadata Cache as soon as a version of it that accepts settings from other plugins is installed; you approve it in that plugin's own dialog.
+An `Extra label property` you configured in an earlier version is not lost. It is kept, and offered to Advanced Metadata Cache (version 1.1.0 or later) the next time both are loaded; you approve it in that plugin's own dialog. If you cancel, it stays kept and is offered again next time.
 
 ## Usage
 

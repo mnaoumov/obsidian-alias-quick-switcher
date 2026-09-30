@@ -27,9 +27,10 @@ import { downloadReleasedPlugin } from './download-released-plugin.ts';
 export const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
 /**
- * The release seeded. `1.0.0` publishes contract `1.0.0`, which carries `getTitlePropertyNames`.
+ * The release seeded. `1.1.1` publishes contract `1.1.0`, which carries `getTitlePropertyNames` and the
+ * `migrateSettings` handover, so the retired setting's offer is driven against the real dialog too.
  */
-export const ADVANCED_METADATA_CACHE_VERSION = '1.0.0';
+export const ADVANCED_METADATA_CACHE_VERSION = '1.1.1';
 
 /**
  * The repository publishing that release.

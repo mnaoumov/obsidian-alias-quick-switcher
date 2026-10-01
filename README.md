@@ -78,7 +78,7 @@ Segments are separated by `/` or by spaces, and a partial path works: `Delta/Ech
 
 ## Installation
 
-The plugin is not yet listed in [the official Community Plugins repository](https://community.obsidian.md/plugins). Until it is, install it as a beta release.
+The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/alias-quick-switcher).
 
 ### Beta versions
 

@@ -68,7 +68,7 @@ const MODAL_SELECTOR = '.alias-quick-switcher-modal';
 const NOTICE_SELECTOR = '.notice';
 
 /**
- * The frontmatter property frame 6 points the plugin at, and the value the staged `Charlie` carries under
+ * The frontmatter property frame 5 points the plugin at, and the value the staged `Charlie` carries under
  * it — a name the switcher can only reach while Advanced Metadata Cache's Titles module reads that property.
  */
 const TITLE_PROPERTY_NAME = 'title';
@@ -87,9 +87,9 @@ beforeAll(async () => {
 
   vault.populate({
     'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n\n# Bravo\n',
-    // `title` alongside the alias, exactly as the demo vault's own `Charlie` carries both — frame 6 is the
+    // `title` alongside the alias, exactly as the demo vault's own `Charlie` carries both — frame 5 is the
     // one row that needs an alias and a property at once, and no other frame is affected by it because the
-    // setting that reads a property is off until frame 6 turns it on.
+    // setting that reads a property is off until frame 5 turns it on.
     'Alpha/Bravo/Charlie.md': '---\naliases:\n  - Echo\ntitle: India\n---\n\n# Charlie\n',
     'Alpha/Bravo/Foxtrot.md': '# Foxtrot\n',
     'Alpha/Golf/Hotel.md': '# Hotel\n',
@@ -159,20 +159,9 @@ describe('desktop frames of the matched row', () => {
     await shoot(4, 'A partial path is enough', WIDTH_IN_PIXELS, HEIGHT_IN_PIXELS);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
-  it('5 - the highlight broken into runs, close up', async () => {
-    // The hardest case for legibility, and the one a full-segment query hides: when every segment matches
-    // whole, the entire first line is highlighted and the highlight is indistinguishable from its absence.
-    // Here each segment is matched by a fragment, so highlighted and plain text sit side by side in the
-    // same word, directly above the muted second line.
-    const rows = await openSwitcher('Alp/Del/Ech');
-
-    expect(rows.length).toBeGreaterThan(0);
-    await shoot(5, 'Each matched run, against the muted real path', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
-  }, TEST_TIMEOUT_IN_MILLISECONDS);
-
-  it('6 - an alias and a frontmatter property on one row', async () => {
+  it('5 - an alias and a frontmatter property on one row', async () => {
     // The only frame that needs a setting: Advanced Metadata Cache's Titles module is off by default, which is what
-    // frames 1-5 are taken under. Turned on here and put back afterwards, because these frames share one
+    // frames 1-4 are taken under. Turned on here and put back afterwards, because these frames share one
     // Obsidian and one settings file.
     await setTitleProperties([TITLE_PROPERTY_NAME]);
 
@@ -184,9 +173,9 @@ describe('desktop frames of the matched row', () => {
       // A weak-looking assertion that is not: nothing else in the staged vault answers to `India`, so a
       // setting that failed to apply offers no row at all rather than a differently-matched one.
       expect(rows.length).toBeGreaterThan(0);
-      // Close up, like frame 5: the markers are two small glyphs at the right edge of one row, and the
-      // whole point of the frame is telling them apart.
-      await shoot(6, 'An alias and a title, each with its own marker', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
+      // Close up: the markers are two small glyphs at the right edge of one row, and the whole point of the
+      // frame is telling them apart.
+      await shoot(5, 'An alias and a title, each with its own marker', CLOSE_UP_WIDTH_IN_PIXELS, CLOSE_UP_HEIGHT_IN_PIXELS);
     } finally {
       await setTitleProperties([]);
     }

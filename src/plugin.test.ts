@@ -22,6 +22,7 @@ import {
 import type { MigratableSettings } from './advanced-metadata-cache.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
 import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
 import { LabelIndexComponent } from './label-index-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
@@ -258,7 +259,8 @@ describe('Plugin', () => {
       expect(params.sourcePluginId).toBe('test-plugin');
       // Only what migrating needs: the provider's first contract does not publish it, and asking for it in the
       // Dependency range instead would refuse to run against every provider that exists.
-      expect(params.contract).toEqual({ migrateSettings: {} });
+      // The entry is the provider's own, schemas included, so both ends check one definition.
+      expect(params.contract).toEqual({ migrateSettings: ADVANCED_METADATA_CACHE_API_CONTRACT.migrateSettings });
 
       expect(params.getProposedSettings()).toBeNull();
       settingsState.settings = { proposedTitlePropertyName: 'subtitle' };

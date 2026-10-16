@@ -12,6 +12,7 @@
     "Alph",
     "arli",
     "asar",
+    "backlinks",
     "beforeinput",
     "Brav",
     "Bravox",
@@ -43,8 +44,10 @@
     "subclassing",
     "tsbuildinfo",
     "uiautomator",
+    "unranked",
     "unvalidated",
-    "wdio"
+    "wdio",
+    "wikilink"
   ],
   "ignoreWords": [],
   "import": [],

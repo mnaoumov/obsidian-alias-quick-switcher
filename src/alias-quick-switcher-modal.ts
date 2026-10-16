@@ -5,15 +5,15 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { MARKDOWN_FILE_EXTENSION } from '@mnaoumov/obsidian-lib/file-system';
+import { PathSettings } from '@mnaoumov/obsidian-lib/path-settings';
+import { addPluginCssClasses } from '@mnaoumov/obsidian-lib/plugin/plugin-context';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   setIcon,
   SuggestModal
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { MARKDOWN_FILE_EXTENSION } from 'obsidian-dev-utils/obsidian/file-system';
-import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
-import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/plugin/plugin-context';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { LabelIndex } from './label-index.ts';
 import type {

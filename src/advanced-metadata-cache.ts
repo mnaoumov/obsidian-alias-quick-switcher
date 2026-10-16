@@ -10,7 +10,7 @@
  * definition.
  */
 
-import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
+import type { TypedApiContract } from '@mnaoumov/typescript-lib/api-contract';
 
 import type {
   AdvancedMetadataCacheApi as AdvancedMetadataCacheFullApi,
@@ -36,7 +36,7 @@ export const ADVANCED_METADATA_CACHE_API_VERSION_RANGE = '^1';
  * asks for exactly what it calls and nothing the migration below needs. The entry is the provider's own, schemas
  * included.
  */
-export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: PluginApiContract = {
+export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: TypedApiContract<AdvancedMetadataCacheTitlesApi> = {
   getTitlePropertyNames: ADVANCED_METADATA_CACHE_API_CONTRACT.getTitlePropertyNames
 };
 
@@ -48,14 +48,14 @@ export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: PluginApiContract = {
  * plugin's `data.json` until a provider that accepts it is installed. Asking for it in the dependency range
  * instead would refuse to RUN on every provider that exists today, to carry across one optional string.
  */
-export const ADVANCED_METADATA_CACHE_MIGRATION_API_CONTRACT: PluginApiContract = {
+export const ADVANCED_METADATA_CACHE_MIGRATION_API_CONTRACT: TypedApiContract<AdvancedMetadataCacheMigrationApi> = {
   migrateSettings: ADVANCED_METADATA_CACHE_API_CONTRACT.migrateSettings
 };
 
 /**
- * `Advanced Metadata Cache`'s public API, as far as this plugin uses it.
+ * The slice of `Advanced Metadata Cache`'s public API the label index calls.
  */
-export type AdvancedMetadataCacheApi = Pick<AdvancedMetadataCacheFullApi, 'getTitlePropertyNames' | 'migrateSettings'>;
+export type AdvancedMetadataCacheTitlesApi = Pick<AdvancedMetadataCacheFullApi, 'getTitlePropertyNames'>;
 
 /**
  * The settings this plugin once owned and now proposes to `Advanced Metadata Cache`.
@@ -66,3 +66,8 @@ export type AdvancedMetadataCacheApi = Pick<AdvancedMetadataCacheFullApi, 'getTi
  * decides how to merge it into its own list.
  */
 export type MigratableSettings = AdvancedMetadataCacheMigratableSettings;
+
+/**
+ * The slice of `Advanced Metadata Cache`'s public API the settings handover calls.
+ */
+type AdvancedMetadataCacheMigrationApi = Pick<AdvancedMetadataCacheFullApi, 'migrateSettings'>;

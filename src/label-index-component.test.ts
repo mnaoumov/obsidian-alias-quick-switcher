@@ -4,10 +4,10 @@ import type {
   TFile
 } from 'obsidian';
 
+import { publishPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { Component } from 'obsidian';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -16,7 +16,7 @@ import {
   it
 } from 'vitest';
 
-import type { AdvancedMetadataCacheApi } from './advanced-metadata-cache.ts';
+import type { AdvancedMetadataCacheTitlesApi } from './advanced-metadata-cache.ts';
 
 import {
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
@@ -169,7 +169,7 @@ function labelTextsOfFolder(path: string): string[] {
 function publishAdvancedMetadataCacheApi(): void {
   providerComponent = new Component();
   providerComponent.load();
-  publishPluginApi<Pick<AdvancedMetadataCacheApi, 'getTitlePropertyNames'>>({
+  publishPluginApi<AdvancedMetadataCacheTitlesApi>({
     api: {
       getTitlePropertyNames: (): string[] => [...titlePropertyNames]
     },

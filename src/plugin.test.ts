@@ -1,15 +1,15 @@
+import type { PluginDependency } from '@mnaoumov/obsidian-lib/components/plugin-gate-component';
+import type { SettingsMigrationComponentConstructorParams } from '@mnaoumov/obsidian-lib/components/settings-migration-component';
+import type { PublishPluginApiParams } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 import type { PluginManifest } from 'obsidian';
-import type { PluginDependency } from 'obsidian-dev-utils/obsidian/components/plugin-gate-component';
-import type { SettingsMigrationComponentConstructorParams } from 'obsidian-dev-utils/obsidian/components/settings-migration-component';
-import type { PublishPluginApiParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
+import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
+import { SettingsMigrationComponent } from '@mnaoumov/obsidian-lib/components/settings-migration-component';
+import { publishPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { Component } from 'obsidian';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
-import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
-import { SettingsMigrationComponent } from 'obsidian-dev-utils/obsidian/components/settings-migration-component';
-import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -29,7 +29,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 /*
- * The real `PluginBase` (from `obsidian-dev-utils`) drives the lifecycle here —
+ * The real `PluginBase` (from `@mnaoumov/obsidian-lib`) drives the lifecycle here —
  * it is NOT mocked. `await plugin.onload()` registers the base's universal
  * components, runs the plugin's `onloadImpl`, then loads every queued child via
  * the real children-first lifecycle. Each child the plugin adds must therefore
@@ -65,14 +65,14 @@ const { settingsState } = vi.hoisted((): HoistedSettingsState => ({
   }
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/command-handler-component', () => ({
+vi.mock('@mnaoumov/obsidian-lib/command-handlers/command-handler-component', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a loadable Component exposing registerCommandHandlers.
   CommandHandlerComponent: vi.fn(function (): Component {
     return Object.assign(new Component(), { registerCommandHandlers });
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
+vi.mock('@mnaoumov/obsidian-lib/active-file-provider', () => ({
   AppActiveFileProvider: vi.fn()
 }));
 
@@ -80,18 +80,18 @@ vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
 // builds its own settings component out of them during `onload`, and that component really calls
 // `pluginEventSource.on`, so a bare `vi.fn()` double makes the base throw before `onloadImpl` runs.
 
-vi.mock('obsidian-dev-utils/obsidian/command-registrar', () => ({
+vi.mock('@mnaoumov/obsidian-lib/command-registrar', () => ({
   PluginCommandRegistrar: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
+vi.mock('@mnaoumov/obsidian-lib/components/plugin-settings-tab-component', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   PluginSettingsTabComponent: vi.fn(function () {
     return new Component();
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/components/settings-migration-component', () => ({
+vi.mock('@mnaoumov/obsidian-lib/components/settings-migration-component', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   SettingsMigrationComponent: vi.fn(function () {
     return new Component();

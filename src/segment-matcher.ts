@@ -12,7 +12,7 @@
 import {
   assertNever,
   ensureNonNullable
-} from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/typescript-lib/type-guards';
 
 /**
  * How well a query segment matched one label. Higher is better, and the values are summed into

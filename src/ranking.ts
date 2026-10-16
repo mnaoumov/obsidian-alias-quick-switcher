@@ -11,7 +11,7 @@
 import {
   assertNever,
   ensureNonNullable
-} from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/typescript-lib/type-guards';
 
 import type {
   PathMatch,

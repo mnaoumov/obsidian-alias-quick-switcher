@@ -17,7 +17,7 @@ interface PluginSettingsComponentConstructorParams {
  */
 class LegacySettings {
   /**
-   * The single extra label property, retired when Advanced Metadata Cache's `Titles` module took the setting over.
+   * The single extra label property, retired when `Advanced Metadata Cache`'s `Titles` module took the setting over.
    */
   public extraLabelPropertyName = '';
 }

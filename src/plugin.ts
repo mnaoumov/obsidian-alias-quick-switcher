@@ -23,7 +23,7 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 export class Plugin extends PluginBase {
   /**
-   * Declares Advanced Metadata Cache as a dependency this plugin cannot run without.
+   * Declares `Advanced Metadata Cache` as a dependency this plugin cannot run without.
    *
    * Not for the title property, which alone would never justify a second install: this plugin's whole
    * performance story is a lookup index, and that plugin exists to keep the vault's metadata lookups indexed. It

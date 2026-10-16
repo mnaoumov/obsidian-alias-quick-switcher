@@ -57,7 +57,7 @@ export function runCommand(app: App, commandId: string): void {
  * Sets one of the plugin's settings and saves it, so a note can demonstrate what a setting changes
  * without sending the reader to the settings tab and back.
  *
- * Manual equivalent: Settings -> Community plugins -> Alias Quick Switcher, and the matching control.
+ * Manual equivalent: Settings -> Community plugins -> `Alias Quick Switcher`, and the matching control.
  */
 export async function setSetting(app: App, propertyName: string, value: unknown): Promise<void> {
   const plugin = app.plugins.getPlugin(PLUGIN_ID);
@@ -74,13 +74,13 @@ export async function setSetting(app: App, propertyName: string, value: unknown)
 }
 
 /**
- * Switches Advanced Metadata Cache's Titles module on or off, so a note can demonstrate a title property
+ * Switches `Advanced Metadata Cache`'s Titles module on or off, so a note can demonstrate a title property
  * without sending the reader to that plugin's settings tab and back.
  *
  * The property list itself is left alone: it defaults to `title`, which is the property this vault's
  * fixture carries, and a reader who has already changed it meant to.
  *
- * Manual equivalent: Settings -> Community plugins -> Advanced Metadata Cache, the Titles module toggle.
+ * Manual equivalent: Settings -> Community plugins -> `Advanced Metadata Cache`, the Titles module toggle.
  */
 export async function setTitlesModuleEnabled(app: App, isEnabled: boolean): Promise<void> {
   const plugin = app.plugins.getPlugin(TITLES_PLUGIN_ID);

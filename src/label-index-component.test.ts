@@ -38,7 +38,7 @@ let component: LabelIndexComponent;
 let providerComponent: Component;
 
 /**
- * What Advanced Metadata Cache's Titles module currently answers. A plain array the tests reassign, standing in
+ * What `Advanced Metadata Cache`'s Titles module currently answers. A plain array the tests reassign, standing in
  * for that plugin's own settings.
  */
 let titlePropertyNames: string[];
@@ -161,7 +161,7 @@ function labelTextsOfFolder(path: string): string[] {
 }
 
 /**
- * Publishes a stand-in for Advanced Metadata Cache's API, answering from {@link titlePropertyNames} at call time.
+ * Publishes a stand-in for `Advanced Metadata Cache`'s API, answering from {@link titlePropertyNames} at call time.
  */
 function publishAdvancedMetadataCacheApi(): void {
   providerComponent = new Component();

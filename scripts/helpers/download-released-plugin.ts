@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
  * Fetches a community plugin's RELEASED build so an integration test can install the real thing into a live
  * vault, rather than a stub standing in for it.
  *
- * This plugin declares Advanced Metadata Cache as a dependency and loads nothing of its own without it, so every
+ * This plugin declares `Advanced Metadata Cache` as a dependency and loads nothing of its own without it, so every
  * vault a suite opens needs that plugin installed — and a stub would only prove that this plugin agrees with
  * the stub. Only a released artifact settles whether the two actually agree.
  *

@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Seeds Advanced Metadata Cache into an integration vault, because this plugin declares it as a dependency and
+ * Seeds `Advanced Metadata Cache` into an integration vault, because this plugin declares it as a dependency and
  * loads nothing of its own until it is there.
  *
  * Without it every suite would meet this plugin blocked — no command, no switcher, no settings — and fail on

@@ -79,7 +79,7 @@ export class LabelIndexComponent extends ComponentEx {
    * properties, and the folder-note setup.
    *
    * Both are read LIVE from the plugin that owns them, never copied into this plugin's settings. The title
-   * properties belong to Advanced Metadata Cache's `Titles` module, so a user types `title` in one place; and
+   * properties belong to `Advanced Metadata Cache`'s `Titles` module, so a user types `title` in one place; and
    * `FolderNoteLocation.Auto` reads the installed `folder-notes` plugin's own settings. Either way, reconfiguring
    * the owner takes effect the next time the switcher opens, with nothing to go stale and no migration to seed.
    *

@@ -13,7 +13,7 @@ import {
   ADVANCED_METADATA_CACHE_VERSION
 } from './helpers/advanced-metadata-cache-seed.ts';
 
-// CodeScript Toolkit is what turns a ```code-button fence into a button, and its root-relative
+// `CodeScript Toolkit` is what turns a ```code-button fence into a button, and its root-relative
 // `require('/demoSetup.ts')` into a call. In real use the in-vault `demo-vault-helper` installs it from
 // the community registry on first launch — a GUI step, and `.obsidian/plugins/*` is gitignored, so the
 // installed copy exists on exactly the one machine that did it and is invisible to a fresh clone, a new
@@ -40,7 +40,7 @@ async function populate(): Promise<PopulateFilesParams> {
         pluginId: CODE_SCRIPT_TOOLKIT_PLUGIN_ID
       },
       // The dependency, which this plugin loads nothing without. Named by repository and pinned, rather than
-      // resolved through the community registry the way CodeScript Toolkit is: the seeded copy must be the
+      // resolved through the community registry the way `CodeScript Toolkit` is: the seeded copy must be the
       // same release every other project seeds. The vault's own startup script then finds it installed and
       // leaves it alone.
       {
@@ -52,7 +52,7 @@ async function populate(): Promise<PopulateFilesParams> {
   });
 }
 
-// Pre-populates the whole `demo-vault/` tree (plus the CodeScript Toolkit binary and its settings)
+// Pre-populates the whole `demo-vault/` tree (plus the `CodeScript Toolkit` binary and its settings)
 // before Obsidian opens, so the startup scan indexes every note in one pass. Used by
 // `integration-tests:demo-vault`.
 const { setup, teardown } = createSetup({

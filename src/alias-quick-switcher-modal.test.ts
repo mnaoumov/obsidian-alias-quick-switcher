@@ -69,7 +69,7 @@ let openFileMock: ReturnType<typeof vi.fn>;
 let settings: PluginSettings;
 
 /**
- * The title properties Advanced Metadata Cache would answer with. Owned by that plugin rather than by these
+ * The title properties `Advanced Metadata Cache` would answer with. Owned by that plugin rather than by these
  * settings, so a test sets them here and the index is built from them.
  */
 let titlePropertyNames: string[];

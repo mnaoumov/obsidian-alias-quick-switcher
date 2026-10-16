@@ -120,7 +120,7 @@ describe('the built-in switcher and this one, on the same match', () => {
 /**
  * Removes every notice on screen and lets the window repaint without it.
  *
- * The integration vault enables Advanced Metadata Cache AFTER this plugin on purpose, so the dependency gate
+ * The integration vault enables `Advanced Metadata Cache` AFTER this plugin on purpose, so the dependency gate
  * raises its "does nothing until" notice at startup, and a frame taken inside that notice's lifetime
  * photographs it. `beforeAll` has already waited for the gate to open, so a notice removed here does not
  * come back.

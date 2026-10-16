@@ -55,7 +55,7 @@ describe('PluginSettingsComponent', () => {
   });
 
   /*
-   * The extra label property moved to Advanced Metadata Cache. A value the user had configured is PARKED for the
+   * The extra label property moved to `Advanced Metadata Cache`. A value the user had configured is PARKED for the
    * handover rather than dropped: dropping it would silently stop a title they relied on from matching.
    */
   describe('the retired extra label property', () => {

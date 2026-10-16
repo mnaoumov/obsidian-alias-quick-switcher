@@ -4,8 +4,8 @@ import type {
 } from 'obsidian';
 import type { App } from 'obsidian-test-mocks/obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { resolveFolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
+import { resolveFolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import {
   beforeEach,
   describe,
@@ -16,7 +16,7 @@ import {
 
 // Stubbed to skip the plugin-context initialization, but it still ADDS the classes: the row styling is
 // addressed by them, so a no-op mock would make every assertion about the rendered row vacuous.
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
+vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-context', () => ({
   addPluginCssClasses: (el: HTMLElement, cssClasses?: string | string[]): void => {
     el.addClass(...(typeof cssClasses === 'string' ? [cssClasses] : cssClasses ?? []));
   }

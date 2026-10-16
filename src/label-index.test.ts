@@ -1,12 +1,12 @@
+import type { FolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
 import type {
   App as AppOriginal,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
 
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -164,7 +164,7 @@ describe('the title properties', () => {
  * The measurement this whole class exists for: 18,763 folders in the vault the plugin was designed
  * against, so resolving folder notes per candidate per keystroke would be 18,763 resolutions on every
  * key press. `resolveName` is called exactly once per `resolveFolderNote`, so counting it counts the
- * resolutions — with no mocking of `obsidian-dev-utils`, whose real code is what runs here.
+ * resolutions — with no mocking of `@mnaoumov/obsidian-lib`, whose real code is what runs here.
  */
 describe('the per-keystroke invariant', () => {
   it('should resolve a folder note once per folder, no matter how often the folder is asked about', () => {

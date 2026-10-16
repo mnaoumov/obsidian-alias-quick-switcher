@@ -1,8 +1,8 @@
+import type { CommandRegistrar } from '@mnaoumov/obsidian-lib/command-registrar';
+import type { PluginSettingsComponentBase } from '@mnaoumov/obsidian-lib/components/plugin-settings-component';
 import type { App } from 'obsidian';
-import type { CommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
-import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 
 import type { LabelIndexComponent } from './label-index-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';

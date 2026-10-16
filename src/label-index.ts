@@ -14,16 +14,16 @@
  * invalidates it if that answer later improves.
  */
 
+import type { FolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
 import type {
   App,
   FrontMatterCache,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
 
+import { resolveFolderNote } from '@mnaoumov/obsidian-lib/folder-note';
 import { parseFrontMatterAliases } from 'obsidian';
-import { resolveFolderNote } from 'obsidian-dev-utils/obsidian/folder-note';
 
 import type { Label } from './segment-matcher.ts';
 

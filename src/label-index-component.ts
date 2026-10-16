@@ -1,15 +1,15 @@
+import type { PluginApiRef } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 import type {
   App,
   TAbstractFile
 } from 'obsidian';
-import type { PluginApiRef } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
-import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
-import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
-import { resolveFolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
-import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
+import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
+import { resolveFolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
+import { watchPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 
-import type { AdvancedMetadataCacheApi } from './advanced-metadata-cache.ts';
+import type { AdvancedMetadataCacheTitlesApi } from './advanced-metadata-cache.ts';
 
 import {
   ADVANCED_METADATA_CACHE_API_VERSION_RANGE,
@@ -27,13 +27,13 @@ interface LabelIndexComponentConstructorParams {
  * when the switcher opens, and keeps the index honest while it is loaded by dropping what the vault changed under
  * it.
  *
- * Split from the index itself the way `obsidian-dev-utils` splits `CaseInsensitiveFileIndex` from its
+ * Split from the index itself the way `@mnaoumov/obsidian-lib` splits `CaseInsensitiveFileIndex` from its
  * component — the index answers questions, the component decides when its answers stopped being true.
  */
 export class LabelIndexComponent extends ComponentEx {
   public readonly labelIndex: LabelIndex;
 
-  private advancedMetadataCacheApiRef: null | PluginApiRef<AdvancedMetadataCacheApi> = null;
+  private advancedMetadataCacheApiRef: null | PluginApiRef<AdvancedMetadataCacheTitlesApi> = null;
   private readonly app: App;
 
   public constructor(params: LabelIndexComponentConstructorParams) {
@@ -49,7 +49,7 @@ export class LabelIndexComponent extends ComponentEx {
   public override onload(): void {
     super.onload();
 
-    this.advancedMetadataCacheApiRef = watchPluginApi<AdvancedMetadataCacheApi>({
+    this.advancedMetadataCacheApiRef = watchPluginApi<AdvancedMetadataCacheTitlesApi>({
       apiVersionRange: ADVANCED_METADATA_CACHE_API_VERSION_RANGE,
       app: this.app,
       component: this,

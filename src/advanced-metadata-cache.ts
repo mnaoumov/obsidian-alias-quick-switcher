@@ -3,14 +3,21 @@
  *
  * `Advanced Metadata Cache`, the plugin this one cannot run without, as this plugin compiles against it.
  *
- * The API is DECLARED here rather than imported. That plugin is an Obsidian plugin repo, not an npm package, so
- * there is nothing to depend on — the shape below is this plugin's compiled-against copy of the members it
- * actually calls, taken from that repo's own copyable `api.d.ts`, and `watchPluginApi` negotiates the version
- * at runtime.
+ * That plugin is an Obsidian plugin repo, not an npm package, so there is nothing to depend on. Its own copyable
+ * `api.d.ts` and `api-contract.ts` are copied VERBATIM into `./advanced-metadata-cache-api/`, and everything here
+ * narrows them to the members this plugin actually calls; `watchPluginApi` negotiates the version at runtime.
+ * Refresh the copy from the provider's repository rather than editing it, so both ends keep checking ONE
+ * definition.
  */
 
 import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
-import type { SettingsMigrationApi } from 'obsidian-dev-utils/obsidian/plugin/settings-migration-api';
+
+import type {
+  AdvancedMetadataCacheApi as AdvancedMetadataCacheFullApi,
+  AdvancedMetadataCacheMigratableSettings
+} from './advanced-metadata-cache-api/api.d.ts';
+
+import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
 
 export const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
@@ -26,14 +33,15 @@ export const ADVANCED_METADATA_CACHE_API_VERSION_RANGE = '^1';
  * What the LABEL INDEX needs — the one read, published since contract `1.0.0`.
  *
  * Supplied to `watchPluginApi` as the consumer's own contract, which wins over the provider's, so the index
- * asks for exactly what it calls and nothing the migration below needs.
+ * asks for exactly what it calls and nothing the migration below needs. The entry is the provider's own, schemas
+ * included.
  */
 export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: PluginApiContract = {
-  getTitlePropertyNames: {}
+  getTitlePropertyNames: ADVANCED_METADATA_CACHE_API_CONTRACT.getTitlePropertyNames
 };
 
 /**
- * What the MIGRATION needs — the generic handover envelope.
+ * What the MIGRATION needs — the generic handover envelope, with the provider's own schemas.
  *
  * Contract `1.0.0` does not publish it. That is deliberate rather than a gap this plugin has to fill: against
  * such a provider the record fails this shape check, the ref stays `null`, and the offer simply waits in this
@@ -41,32 +49,20 @@ export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: PluginApiContract = {
  * instead would refuse to RUN on every provider that exists today, to carry across one optional string.
  */
 export const ADVANCED_METADATA_CACHE_MIGRATION_API_CONTRACT: PluginApiContract = {
-  migrateSettings: {}
+  migrateSettings: ADVANCED_METADATA_CACHE_API_CONTRACT.migrateSettings
 };
 
 /**
  * `Advanced Metadata Cache`'s public API, as far as this plugin uses it.
  */
-export interface AdvancedMetadataCacheApi extends SettingsMigrationApi<MigratableSettings> {
-  /**
-   * The frontmatter properties whose values currently count as a note's title.
-   *
-   * @returns The configured property names, in the order they were typed. Empty while that plugin's `Titles`
-   *   module is off, which is the same answer as "none are configured".
-   */
-  getTitlePropertyNames: () => string[];
-}
+export type AdvancedMetadataCacheApi = Pick<AdvancedMetadataCacheFullApi, 'getTitlePropertyNames' | 'migrateSettings'>;
 
 /**
  * The settings this plugin once owned and now proposes to `Advanced Metadata Cache`.
  *
  * Every member is optional, per the envelope's convention: a proposal carries only what was actually
- * configured, so a value the provider already owns is never overwritten by a default nobody chose.
+ * configured, so a value the provider already owns is never overwritten by a default nobody chose. This plugin
+ * only ever proposes one title property — the single extra label property it used to have — and the provider
+ * decides how to merge it into its own list.
  */
-export interface MigratableSettings {
-  /**
-   * Property names to count as titles. This plugin only ever proposes one — the single extra label property it
-   * used to have — and the provider decides how to merge it into its own list.
-   */
-  readonly titlePropertyNames?: readonly string[];
-}
+export type MigratableSettings = AdvancedMetadataCacheMigratableSettings;

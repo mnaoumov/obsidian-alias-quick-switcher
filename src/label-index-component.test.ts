@@ -18,7 +18,10 @@ import {
 
 import type { AdvancedMetadataCacheApi } from './advanced-metadata-cache.ts';
 
-import { ADVANCED_METADATA_CACHE_PLUGIN_ID } from './advanced-metadata-cache.ts';
+import {
+  ADVANCED_METADATA_CACHE_PLUGIN_ID,
+  ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT
+} from './advanced-metadata-cache.ts';
 import { LabelIndexComponent } from './label-index-component.ts';
 
 const VAULT_FILES: Record<string, string> = {
@@ -172,6 +175,7 @@ function publishAdvancedMetadataCacheApi(): void {
     },
     apiVersion: '1.0.0',
     component: providerComponent,
+    contract: ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT,
     plugin: castTo<PluginOriginal>({ manifest: { id: ADVANCED_METADATA_CACHE_PLUGIN_ID } })
   });
 }

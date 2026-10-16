@@ -172,7 +172,7 @@ describe('Plugin', () => {
       removeSettingTab: vi.fn()
     };
 
-    // Advanced Metadata Cache is a declared dependency, so the feature surface — everything these tests look at
+    // `Advanced Metadata Cache` is a declared dependency, so the feature surface — everything these tests look at
     // — loads only once its API is published. An empty API is enough: the gate checks only that one is there, at
     // A matching version. Each test gets a fresh app, and with it a fresh registry.
     providerComponent = new Component();

@@ -69,7 +69,7 @@ const NOTICE_SELECTOR = '.notice';
 
 /**
  * The frontmatter property frame 5 points the plugin at, and the value the staged `Charlie` carries under
- * it — a name the switcher can only reach while Advanced Metadata Cache's Titles module reads that property.
+ * it — a name the switcher can only reach while `Advanced Metadata Cache`'s Titles module reads that property.
  */
 const TITLE_PROPERTY_NAME = 'title';
 const TITLE_VALUE = 'India';
@@ -160,7 +160,7 @@ describe('desktop frames of the matched row', () => {
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
   it('5 - an alias and a frontmatter property on one row', async () => {
-    // The only frame that needs a setting: Advanced Metadata Cache's Titles module is off by default, which is what
+    // The only frame that needs a setting: `Advanced Metadata Cache`'s Titles module is off by default, which is what
     // frames 1-4 are taken under. Turned on here and put back afterwards, because these frames share one
     // Obsidian and one settings file.
     await setTitleProperties([TITLE_PROPERTY_NAME]);
@@ -185,7 +185,7 @@ describe('desktop frames of the matched row', () => {
 /**
  * Removes every notice on screen and lets the window repaint without it.
  *
- * The integration vault enables Advanced Metadata Cache AFTER this plugin on purpose, so the dependency gate
+ * The integration vault enables `Advanced Metadata Cache` AFTER this plugin on purpose, so the dependency gate
  * raises its "does nothing until" notice at startup, and a frame taken inside that notice's lifetime
  * photographs it. `beforeAll` has already waited for the gate to open, so a notice removed here does not
  * come back.
@@ -288,7 +288,7 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
- * Points Advanced Metadata Cache's Titles module at frontmatter properties, or switches it off.
+ * Points `Advanced Metadata Cache`'s Titles module at frontmatter properties, or switches it off.
  *
  * Read structurally rather than asserted through `unknown`, the same way
  * `source-flairs.desktop.integration.test.ts` reaches it: this touches a member the plugin base keeps

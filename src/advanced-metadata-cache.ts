@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Advanced Metadata Cache, the plugin this one cannot run without, as this plugin compiles against it.
+ * `Advanced Metadata Cache`, the plugin this one cannot run without, as this plugin compiles against it.
  *
  * The API is DECLARED here rather than imported. That plugin is an Obsidian plugin repo, not an npm package, so
  * there is nothing to depend on — the shape below is this plugin's compiled-against copy of the members it
@@ -45,7 +45,7 @@ export const ADVANCED_METADATA_CACHE_MIGRATION_API_CONTRACT: PluginApiContract =
 };
 
 /**
- * Advanced Metadata Cache's public API, as far as this plugin uses it.
+ * `Advanced Metadata Cache`'s public API, as far as this plugin uses it.
  */
 export interface AdvancedMetadataCacheApi extends SettingsMigrationApi<MigratableSettings> {
   /**
@@ -58,7 +58,7 @@ export interface AdvancedMetadataCacheApi extends SettingsMigrationApi<Migratabl
 }
 
 /**
- * The settings this plugin once owned and now proposes to Advanced Metadata Cache.
+ * The settings this plugin once owned and now proposes to `Advanced Metadata Cache`.
  *
  * Every member is optional, per the envelope's convention: a proposal carries only what was actually
  * configured, so a value the provider already owns is never overwritten by a default nobody chose.

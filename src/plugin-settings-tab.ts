@@ -22,7 +22,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         }
       }),
       this.settingEx({
-        desc: 'Notes and folder notes can also be reached by a title property, not only by an alias. Which properties count is set once, in the Titles module of Advanced Metadata Cache, so every plugin that reads titles agrees. A row reached through one is marked with the property\'s own icon rather than the alias one, and names the property in its tooltip.',
+        desc: createFragment((f) => {
+          f.appendText('Notes and folder notes can also be reached by a title property, not only by an alias. Which properties count is set once, in the Titles module of ');
+          appendCodeBlock(f, 'Advanced Metadata Cache');
+          f.appendText(', so every plugin that reads titles agrees. A row reached through one is marked with the property\'s own icon rather than the alias one, and names the property in its tooltip.');
+        }),
         name: 'Title properties',
         render: noop
       }),
@@ -57,7 +61,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.appendText(' - real names before aliases, so this switcher never reshuffles the results Obsidian\'s own already gives you.');
           f.createEl('br');
           appendCodeBlock(f, 'Link picker');
-          f.appendText(' - how well the query matched decides everything and an alias is just another name, the order Link Picker uses. Surfaces alias hits sooner, and gives up the guarantee above.');
+          f.appendText(' - how well the query matched decides everything and an alias is just another name, the order ');
+          appendCodeBlock(f, 'Link Picker');
+          f.appendText(' uses. Surfaces alias hits sooner, and gives up the guarantee above.');
         }),
         name: 'Ranking',
         render: (setting) => {

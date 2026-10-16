@@ -79,7 +79,7 @@ const AVD_NAME = 'obsidian_screenshots';
 
 /**
  * The frontmatter property frame 5 points the plugin at, and the value the staged `Charlie` carries under
- * it — a name the switcher can only reach while Advanced Metadata Cache's Titles module reads that property.
+ * it — a name the switcher can only reach while `Advanced Metadata Cache`'s Titles module reads that property.
  */
 const TITLE_PROPERTY_NAME = 'title';
 const TITLE_VALUE = 'India';
@@ -166,7 +166,7 @@ describe('mobile frames of the matched row', () => {
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
   it('5 - an alias and a frontmatter property on one row', async () => {
-    // The only frame that needs a setting: Advanced Metadata Cache's Titles module is off by default, which is what
+    // The only frame that needs a setting: `Advanced Metadata Cache`'s Titles module is off by default, which is what
     // frames 1-4 are taken under. Turned on here and put back afterwards, because these frames share one
     // Obsidian and one settings file.
     await setTitleProperties([TITLE_PROPERTY_NAME]);
@@ -264,7 +264,7 @@ async function openSwitcher(query: string): Promise<string[]> {
 }
 
 /**
- * Points Advanced Metadata Cache's Titles module at frontmatter properties, or switches it off.
+ * Points `Advanced Metadata Cache`'s Titles module at frontmatter properties, or switches it off.
  *
  * Read structurally rather than asserted through `unknown`, the same way
  * `source-flairs.desktop.integration.test.ts` reaches it: this touches a member the plugin base keeps

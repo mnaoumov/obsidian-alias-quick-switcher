@@ -30,7 +30,7 @@ Try `Brv/Chrl` under each. A contiguous match still scores above a scattered one
 `rankingMode` decides what order the results come back in.
 
 - `Tiered` — real names first. A result matched entirely by real names ranks above one that needed an alias, which is what guarantees this switcher never reshuffles the results Obsidian's own already gives you. The default.
-- `LinkPicker` — how well the query matched decides everything, and an alias is just another name. This is the order Link Picker sorts by. Alias hits surface sooner, and the guarantee above is deliberately given up.
+- `LinkPicker` — how well the query matched decides everything, and an alias is just another name. This is the order `Link Picker` sorts by. Alias hits surface sooner, and the guarantee above is deliberately given up.
 
 ```code-button
 ---

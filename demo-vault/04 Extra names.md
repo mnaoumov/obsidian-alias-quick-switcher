@@ -2,7 +2,7 @@
 
 An alias is not the only place a note keeps a name. Plenty of vaults carry a display title in a frontmatter property — `title`, most often, written there by a template or by another plugin — and that name is invisible to every switcher, including this one, until something says which property to read.
 
-That something is the **Titles** module of **Advanced Metadata Cache**, the plugin this switcher depends on. Turn it on and every property in its list — `title` by default — becomes another name the note answers to, in every segment of a path, ranked and rendered exactly as an alias is. Leave it off and only `aliases` is consulted, which is what Obsidian itself considers an alias. The list lives in that plugin rather than in this one so that every plugin reading titles agrees on it, and you type `title` in one place.
+That something is the **Titles** module of **`Advanced Metadata Cache`**, the plugin this switcher depends on. Turn it on and every property in its list — `title` by default — becomes another name the note answers to, in every segment of a path, ranked and rendered exactly as an alias is. Leave it off and only `aliases` is consulted, which is what Obsidian itself considers an alias. The list lives in that plugin rather than in this one so that every plugin reading titles agrees on it, and you type `title` in one place.
 
 ## The fixture already carries one
 

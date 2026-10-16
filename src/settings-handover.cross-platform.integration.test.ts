@@ -10,8 +10,8 @@ import {
 
 /*
  * The retired `extraLabelPropertyName`, end to end against the REAL provider: a `data.json` written by a release
- * that still had the setting is loaded, the value is parked as `proposedTitlePropertyName`, and Advanced Metadata
- * Cache's own dialog offers it. The unit tests cover the parking and the retirement against a published fake; only
+ * that still had the setting is loaded, the value is parked as `proposedTitlePropertyName`, and
+ * `Advanced Metadata Cache`'s own dialog offers it. The unit tests cover the parking and the retirement against a published fake; only
  * a real provider can say that the envelope this plugin sends is one it actually accepts.
  *
  * - OK hands the name over (merged into the provider's list, the `Titles` module switched on) and retires the

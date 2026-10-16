@@ -11,7 +11,7 @@ import { generatePerformanceVault } from './helpers/generate-performance-vault.t
  * with a note tree at the scale the plugin was designed against before Obsidian opens it, so the startup
  * scan indexes everything in one pass.
  *
- * Advanced Metadata Cache is seeded alongside, as in every other project: this plugin declares it as a
+ * `Advanced Metadata Cache` is seeded alongside, as in every other project: this plugin declares it as a
  * dependency and loads nothing without it.
  */
 export const { setup, teardown } = createSetup({

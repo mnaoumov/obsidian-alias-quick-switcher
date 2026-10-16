@@ -124,13 +124,15 @@ describe('PluginSettingsTab', () => {
   });
 
   /*
-   * The title properties used to be a text field here. They belong to Advanced Metadata Cache now, so the row
+   * The title properties used to be a text field here. They belong to `Advanced Metadata Cache` now, so the row
    * that replaced the field must SEND the user there rather than offer a second place to type `title`.
    */
   it('should point at Advanced Metadata Cache for the title properties, and offer no field for them', () => {
     const tab = createTab();
     const titleRow = tab.getSettingDefinitions().find((definition) => 'name' in definition && definition.name === 'Title properties');
-    expect(titleRow && 'desc' in titleRow ? titleRow.desc : undefined).toContain('Advanced Metadata Cache');
+    const desc = titleRow && 'desc' in titleRow ? titleRow.desc : undefined;
+    expect(desc).toBeInstanceOf(DocumentFragment);
+    expect(castTo<DocumentFragment>(desc).querySelector('code')?.textContent).toBe('Advanced Metadata Cache');
 
     callDisplay(tab);
     expect(getBoundKeys()).not.toContain('proposedTitlePropertyName');

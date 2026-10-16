@@ -10,7 +10,7 @@ export class PluginSettings {
   public excludedPathPatterns: string[] = [];
 
   /**
-   * The extra label property a user configured before Advanced Metadata Cache took the setting over, waiting to
+   * The extra label property a user configured before `Advanced Metadata Cache` took the setting over, waiting to
    * be proposed to it.
    *
    * Not a setting anyone edits: it is filled once, from the retired `extraLabelPropertyName`, and cleared only

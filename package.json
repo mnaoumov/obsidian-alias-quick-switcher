@@ -51,6 +51,7 @@
   "devDependencies": {
     "@codemirror/state": "6.5.0",
     "@codemirror/view": "6.38.6",
+    "@mnaoumov/typescript-lib": "^1.1.0",
     "@obsidian-typings/obsidian-public-latest": "^6.38.0",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/strictest": "^2.0.8",

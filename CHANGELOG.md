@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 2.1.0
+
+- feat: match excluded paths case-insensitively, with globs and regex flags
+- docs: mark plugin names as code
+- build(deps): merge taking obsidian-lib 4.3.0 and its validation debug switch
+- chore(github): point questions to Discussions from the new-issue page
+- ci: merge attesting release assets through the toolkit's reusable workflow
+- refactor(deps): merge moving off obsidian-dev-utils onto the @mnaoumov packages
+- refactor(api): merge re-copying the Advanced Metadata Cache contract in its short typescript-lib form
+- refactor(api): merge building the Advanced Metadata Cache contracts from the provider's copied contract
+- fix(settings): merge marking plugin names as code in the settings tab, docs and comments
+- chore(screenshots): merge keeping five desktop frames, matching the directory listing
+- docs(readme): merge pointing the install line at the community directory listing
+- docs(agents): merge restating the registry invariant now that 2.0.0 carries the dependency
+
 ## 2.0.0
 
 - test(migration): merge driving the retired property handover against the real provider

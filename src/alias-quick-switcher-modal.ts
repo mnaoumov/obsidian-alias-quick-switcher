@@ -368,7 +368,8 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
   }
 
   private buildFolderCandidate(folder: TFolder): Candidate | null {
-    if (this.excludedPaths.isPathIgnored(folder.path)) {
+    // A folder-only entry (one ending in `/`) matches the folder itself only when told it is a folder.
+    if (this.excludedPaths.isPathIgnored(folder.path, true)) {
       return null;
     }
 

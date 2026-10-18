@@ -4,8 +4,9 @@ import { SegmentMatchMode } from './segment-matcher.ts';
 export class PluginSettings {
   /**
    * Paths matching any of these are never offered as results. Matched against the whole vault-relative
-   * path, so a pattern can exclude a folder or a single note. An entry wrapped in `/` is a regular
-   * expression; every other entry is a plain path.
+   * path, so a pattern can exclude a folder or a single note. An entry is a plain path, a glob (it holds an
+   * unescaped `*`, `?` or `[`), or a regular expression written `/pattern/flags`; every form matches
+   * case-insensitively.
    */
   public excludedPathPatterns: string[] = [];
 

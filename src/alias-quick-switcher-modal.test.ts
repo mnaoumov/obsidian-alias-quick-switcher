@@ -158,6 +158,23 @@ describe('which files are offered', () => {
     settings.excludedPathPatterns = [String.raw`/^Alpha\/Hotel\//`];
     expect(openTargetsFor('India')).toStrictEqual([]);
   });
+
+  it('should leave out a path whatever the case of the entry that excludes it', () => {
+    settings.excludedPathPatterns = ['archive'];
+    expect(openTargetsFor('Old Note')).toStrictEqual([]);
+  });
+
+  it('should leave out a file matched by a name glob at any depth', () => {
+    settings.shouldIncludeNonMarkdownFiles = true;
+    settings.excludedPathPatterns = ['*.canvas'];
+    expect(openTargetsFor('Sketch')).toStrictEqual([]);
+    expect(openTargetsFor('Diagram')).toStrictEqual([]);
+  });
+
+  it('should leave out the folder itself, not only its contents, for a folder-only glob', () => {
+    settings.excludedPathPatterns = ['Bra*/'];
+    expect(suggestionsFor('Delta').map((suggestion) => suggestion.path)).toStrictEqual([]);
+  });
 });
 
 describe('the empty query', () => {

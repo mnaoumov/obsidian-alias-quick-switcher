@@ -13,7 +13,41 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   protected override getSettingDefinitionItems(): SettingDefinitionItem[] {
     return [
       this.settingEx({
-        desc: 'Paths matching any of these are never offered as results.',
+        desc: createFragment((f) => {
+          f.appendText('Paths matching any of these are never offered as results. Every entry matches case-insensitively, in one of three forms:');
+          f.createEl('br');
+          f.appendText('a plain path, such as ');
+          appendCodeBlock(f, 'Archive');
+          f.appendText(', which matches that path and everything inside it;');
+          f.createEl('br');
+          f.appendText('a glob, such as ');
+          appendCodeBlock(f, '*.pdf');
+          f.appendText(' or ');
+          appendCodeBlock(f, 'Archive/**/Draft*');
+          f.appendText(' - ');
+          appendCodeBlock(f, '*');
+          f.appendText(' stays within a folder, ');
+          appendCodeBlock(f, '**');
+          f.appendText(' crosses folders, a glob with no ');
+          appendCodeBlock(f, '/');
+          f.appendText(' matches a name at any depth, and a trailing ');
+          appendCodeBlock(f, '/');
+          f.appendText(' matches folders only;');
+          f.createEl('br');
+          f.appendText('a regular expression, such as ');
+          appendCodeBlock(f, String.raw`/^Daily\/\d{4}/`);
+          f.appendText(', whose flags are honoured.');
+          f.createEl('br');
+          f.appendText('To use ');
+          appendCodeBlock(f, '*');
+          f.appendText(', ');
+          appendCodeBlock(f, '?');
+          f.appendText(' or ');
+          appendCodeBlock(f, '[');
+          f.appendText(' literally in a path, escape it with ');
+          appendCodeBlock(f, '\\');
+          f.appendText('.');
+        }),
         name: 'Excluded paths',
         render: (setting) => {
           setting.addMultipleText((multipleText) => {

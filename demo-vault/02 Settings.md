@@ -9,7 +9,7 @@ Open **Settings -> Community plugins -> `Alias Quick Switcher`** to see the sett
 - `shouldIncludeNonMarkdownFiles`
   - offer files that are not markdown notes, the way Obsidian's own switcher does when asked.
 - `excludedPathPatterns`
-  - paths matching any of these are never offered. Matched against the whole vault-relative path, so a pattern can exclude a folder or a single note.
+  - paths matching any of these are never offered. Matched case-insensitively against the whole vault-relative path, so a pattern can exclude a folder or a single note. An entry takes one of three forms: a plain path (`Archive`), which matches that path and everything inside it; a glob (`*.pdf`, `Archive/**/Draft*`), where `*` stays within a folder, `**` crosses folders, a glob with no `/` matches a name at any depth and a trailing `/` matches folders only; or a regular expression written `/pattern/flags`, whose flags are honoured. Escape a literal `*`, `?` or `[` in a path with `\`.
 
 ## What counts as a name
 

@@ -37,7 +37,7 @@ caption: Open quick switcher
 require('/demoSetup.ts').runCommand(app, 'open');
 ```
 
-Manual equivalent: run the Command Palette entry **Alias Quick Switcher: Open quick switcher**, or give it a hotkey of your own.
+Manual equivalent: run the Command Palette entry **`Alias Quick Switcher`: Open quick switcher**, or give it a hotkey of your own.
 
 Each segment of your query is matched against the real name **or** any alias of whatever sits at that position — the folder's folder note for an ancestor, the note itself for the last segment. Segments are separated by `/` or by spaces, and a partial path is enough, so `Delta/Echo` works too.
 

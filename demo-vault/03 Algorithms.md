@@ -1,6 +1,6 @@
 # Algorithms
 
-Two parts of the matching are yours to choose, because the sensible answers disagree about something real rather than cosmetic. Both live in **Settings -> Community plugins -> Alias Quick Switcher**, and the buttons below set them for you.
+Two parts of the matching are yours to choose, because the sensible answers disagree about something real rather than cosmetic. Both live in **Settings -> Community plugins -> `Alias Quick Switcher`**, and the buttons below set them for you.
 
 ## Segment matching
 

@@ -22,7 +22,7 @@ caption: Read the title property as a name
 await require('/demoSetup.ts').setTitlesModuleEnabled(app, true);
 ```
 
-Manual equivalent: turn the **Titles** module on in **Settings -> Community plugins -> Advanced Metadata Cache**. Its property list already says `title`.
+Manual equivalent: turn the **Titles** module on in **Settings -> Community plugins -> `Advanced Metadata Cache`**. Its property list already says `title`.
 
 Now try the query the note was unreachable by:
 

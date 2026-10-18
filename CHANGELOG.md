@@ -12,7 +12,7 @@
 - chore(deps): merge floating obsidian-integration-testing to ^17.0.1 with obsidian-dev-utils ^107.0.0
 - docs(test): merge pointing the dead TARGET_FOLDER link at TARGET_FOLDER_NAME
 - chore(deps): merge floating obsidian-test-mocks to ^7.0.0
-- feat!: merge taking the title properties from Advanced Metadata Cache
+- feat!: merge taking the title properties from `Advanced Metadata Cache`
 - fix(test): merge the headless demo-vault toolkit install
 - fix(deps): restore the lockfile's missing resolved and integrity fields
 - docs(demo-vault): demonstrate the extra label property, and frame its marker
@@ -47,4 +47,4 @@
 - chore(deps): sweep caret-ranged dependencies to latest
 - fix(deps): move to obsidian-integration-testing 11 and obsidian-dev-utils 96.5.2
 - fix(deps): drop the brace-expansion file: override that breaks a clean install
-- feat: scaffold Alias Quick Switcher
+- feat: scaffold `Alias Quick Switcher`

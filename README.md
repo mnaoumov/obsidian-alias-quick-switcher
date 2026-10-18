@@ -35,7 +35,7 @@ You gave a note an alias so you could find it by the name you actually call it, 
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
-1. Running the **Alias Quick Switcher: Open demo vault** command.
+1. Running the **`Alias Quick Switcher`: Open demo vault** command.
 2. Downloading `alias-quick-switcher-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-alias-quick-switcher/releases). It unzips into a single `alias-quick-switcher-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
@@ -71,7 +71,7 @@ An `Extra label property` you configured in an earlier version is not lost. It i
 
 ## Usage
 
-Assign a hotkey to **Alias Quick Switcher: Open quick switcher** and type a path. Obsidian's own quick switcher and its `Ctrl+O` are left exactly as they are — this plugin patches nothing, so you decide which of the two your muscle memory opens.
+Assign a hotkey to **`Alias Quick Switcher`: Open quick switcher** and type a path. Obsidian's own quick switcher and its `Ctrl+O` are left exactly as they are — this plugin patches nothing, so you decide which of the two your muscle memory opens.
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
 

@@ -10,8 +10,8 @@ Migration: excluded-path entries now match case-insensitively in every form. An 
 - chore(github): point questions to Discussions from the new-issue page
 - ci: merge attesting release assets through the toolkit's reusable workflow
 - refactor(deps): merge moving off obsidian-dev-utils onto the @mnaoumov packages
-- refactor(api): merge re-copying the Advanced Metadata Cache contract in its short typescript-lib form
-- refactor(api): merge building the Advanced Metadata Cache contracts from the provider's copied contract
+- refactor(api): merge re-copying the `Advanced Metadata Cache` contract in its short typescript-lib form
+- refactor(api): merge building the `Advanced Metadata Cache` contracts from the provider's copied contract
 - fix(settings): merge marking plugin names as code in the settings tab, docs and comments
 - chore(screenshots): merge keeping five desktop frames, matching the directory listing
 - docs(readme): merge pointing the install line at the community directory listing

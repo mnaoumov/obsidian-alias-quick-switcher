@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.1.1
+
+- build(deps): clear the brace-expansion, sharp and fast-uri advisories
+- docs(changelog): add the 2.1.0 excluded paths migration note
+
 ## 2.1.0
 
 Migration: excluded-path entries now match case-insensitively in every form. An unescaped `*`, `?` or `[` makes an entry a glob (`*.pdf`, `Archive/**/Draft*`, `tmp*/`), so a plain path that contains one of those characters literally must escape it (`Notes \[old\]`). An entry shaped `/pattern/flags` is a regular expression whose flags are honoured, and a folder-only glob (ending in `/`) hides the folder row itself as well as its contents.

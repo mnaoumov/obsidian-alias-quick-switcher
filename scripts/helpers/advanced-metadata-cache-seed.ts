@@ -27,10 +27,13 @@ import { downloadReleasedPlugin } from './download-released-plugin.ts';
 export const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
 /**
- * The release seeded. `1.1.1` publishes contract `1.1.0`, which carries `getTitlePropertyNames` and the
- * `migrateSettings` handover, so the retired setting's offer is driven against the real dialog too.
+ * The release seeded. `2.0.3` is the first release built on `@mnaoumov/obsidian-lib` 6, the major this plugin is
+ * built on: the plugin-API registry lives in that library's shared-state bag, and a provider on an older major
+ * publishes where this plugin never looks, so the dependency gate would never open. Its contract carries
+ * `getTitlePropertyNames` and the `migrateSettings` handover, so the retired setting's offer is driven against the
+ * real dialog too.
  */
-export const ADVANCED_METADATA_CACHE_VERSION = '1.1.1';
+export const ADVANCED_METADATA_CACHE_VERSION = '2.0.3';
 
 /**
  * The repository publishing that release.

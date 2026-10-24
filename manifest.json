@@ -5,6 +5,6 @@
   "id": "alias-quick-switcher",
   "isDesktopOnly": false,
   "name": "Alias Quick Switcher",
-  "version": "2.1.1",
-  "minAppVersion": "1.14.4"
+  "version": "2.1.2",
+  "minAppVersion": "1.14.5"
 }

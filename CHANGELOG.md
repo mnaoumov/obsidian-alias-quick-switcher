@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2.1.2
+
+- style: format the demo-vault setup script
+- test(demo-vault): floor `CodeScript Toolkit` at 15.0.0
+- test: seed `Advanced Metadata Cache` 2.0.3 into the integration vaults
+- build(deps): move to obsidian-lib 6 and obsidian-dev-toolkit 5
+- docs: shorten the debugging section
+- fix(demo-vault): load the demo setup helpers from @mnaoumov/obsidian-lib
+- docs(readme): lead the Debugging section with `Advanced Debug Mode`
+
 ## 2.1.1
 
 - build(deps): clear the brace-expansion, sharp and fast-uri advisories

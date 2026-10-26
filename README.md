@@ -75,6 +75,15 @@ Assign a hotkey to **`Alias Quick Switcher`: Open quick switcher** and type a pa
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
 
+## Similar plugins
+
+- [`Quick Switcher++`](https://community.obsidian.md/plugins/darlal-switcher-plus) — an extended switcher with modes for headings, symbols, open tabs, commands and more, and it can show a frontmatter property as the title; it matches an alias only as the whole query on the note itself, never inside a path.
+- [`Another Quick Switcher`](https://community.obsidian.md/plugins/obsidian-another-quick-switcher) — a switcher with configurable searches and sort priorities, where every name match is against the file name or an alias; a path is matched as literal folder text, so an alias cannot stand in for a folder or sit after one.
+- [`Lemons Search`](https://community.obsidian.md/plugins/lemons-search) — a fast fuzzy finder with a file preview, with one search over file paths and a separate one over names and aliases; it never combines the two in one query.
+- [`Omnisearch`](https://community.obsidian.md/plugins/omnisearch) — full-text search across notes, PDFs and images, ranked by relevance; it searches what a note says, where this plugin matches a path segment by segment.
+
+Last searched for similar plugins on 2026-10-26.
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/alias-quick-switcher).

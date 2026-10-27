@@ -48,17 +48,21 @@ const STAMP_RANGE = 1000;
  * Both sides of the handover, as each plugin holds it after the user answered.
  */
 interface HandoverState {
-  readonly isTitlesModuleEnabled: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
+  isTitlesModuleEnabled: boolean;
   readonly proposedTitlePropertyName: unknown;
   readonly savedKeys: string[];
-  readonly titlePropertyNames: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
+  titlePropertyNames: string[];
 }
 
 /**
  * The provider's settings, as far as this suite reads and resets them.
  */
 interface TitlesSettingsLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
   isTitlesModuleEnabled: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
   titlePropertyNames: string[];
 }
 
@@ -166,7 +170,7 @@ async function setProviderTitles(titlesSettings: TitlesSettingsLike): Promise<vo
   await evalInObsidian({
     async callback({ app, pluginId, titlesSettings: newSettings }): Promise<void> {
       interface SettingsEditor {
-        editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
+        readonly editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
       }
 
       const plugin = app.plugins.getPlugin(pluginId);

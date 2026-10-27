@@ -143,11 +143,12 @@ describe('The ranking setting', () => {
       await evalInObsidian({
         async callback({ app, mode: newMode, pluginId }): Promise<void> {
           interface SwitcherSettingsLike {
+            // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
             rankingMode: string;
           }
 
           interface SettingsEditor {
-            editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
+            readonly editAndSave: (this: void, settingsEditor: (settings: SwitcherSettingsLike) => void) => Promise<void>;
           }
 
           const plugin = app.plugins.getPlugin(pluginId);

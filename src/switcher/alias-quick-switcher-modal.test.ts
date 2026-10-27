@@ -52,14 +52,16 @@ const VAULT_FILES: Record<string, string> = {
 };
 
 interface RecentFileTrackerLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup replaces this mock state between scenarios.
   lastOpenFiles: string[];
 }
 
 interface RecentFileTrackerMock {
-  workspace: WorkspaceWithRecentFiles;
+  readonly workspace: WorkspaceWithRecentFiles;
 }
 
 interface WorkspaceWithRecentFiles {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup replaces this mock state between scenarios.
   recentFileTracker: RecentFileTrackerLike;
 }
 

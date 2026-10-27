@@ -301,11 +301,13 @@ async function setTitleProperties(propertyNames: string[]): Promise<void> {
   await evalInObsidian({
     async callback({ app, pluginId, propertyNames: newPropertyNames }): Promise<void> {
       interface SettingsEditor {
-        editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
+        readonly editAndSave: (this: void, settingsEditor: (settings: TitlesSettingsLike) => void) => Promise<void>;
       }
 
       interface TitlesSettingsLike {
+        // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
         isTitlesModuleEnabled: boolean;
+        // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor assigns this property when saving or restoring settings.
         titlePropertyNames: string[];
       }
 

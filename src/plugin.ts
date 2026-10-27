@@ -16,10 +16,10 @@ import {
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_PLUGIN_NAME
 } from './advanced-metadata-cache.ts';
-import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
-import { LabelIndexComponent } from './label-index-component.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettingsTab } from './plugin-settings-tab.ts';
+import { LabelIndexComponent } from './label-index/label-index-component.ts';
+import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
+import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
+import { AliasQuickSwitcherComponent } from './switcher/alias-quick-switcher-component.ts';
 
 export class Plugin extends PluginBase {
   /**

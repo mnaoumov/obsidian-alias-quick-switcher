@@ -15,10 +15,10 @@ import {
   vi
 } from 'vitest';
 
+import { LabelIndexComponent } from '../label-index/label-index-component.ts';
+import { PluginSettings } from '../settings/plugin-settings.ts';
 import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
 import { AliasQuickSwitcherModal } from './alias-quick-switcher-modal.ts';
-import { LabelIndexComponent } from './label-index-component.ts';
-import { PluginSettings } from './plugin-settings.ts';
 
 /**
  * What the strict `App` mock still has no member for; `resolveFolderNoteConfig` reads it to find the

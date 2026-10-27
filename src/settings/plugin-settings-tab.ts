@@ -6,8 +6,8 @@ import { noop } from '@mnaoumov/typescript-lib/function';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
-import { RankingMode } from './ranking.ts';
-import { SegmentMatchMode } from './segment-matcher.ts';
+import { RankingMode } from '../matching/ranking.ts';
+import { SegmentMatchMode } from '../matching/segment-matcher.ts';
 
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   protected override getSettingDefinitionItems(): SettingDefinitionItem[] {

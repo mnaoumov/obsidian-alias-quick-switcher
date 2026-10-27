@@ -4,8 +4,8 @@ import type { App } from 'obsidian';
 
 import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 
-import type { LabelIndexComponent } from './label-index-component.ts';
-import type { PluginSettings } from './plugin-settings.ts';
+import type { LabelIndexComponent } from '../label-index/label-index-component.ts';
+import type { PluginSettings } from '../settings/plugin-settings.ts';
 
 import { AliasQuickSwitcherModal } from './alias-quick-switcher-modal.ts';
 

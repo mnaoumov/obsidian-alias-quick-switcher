@@ -16,12 +16,12 @@ import {
   it
 } from 'vitest';
 
-import type { AdvancedMetadataCacheTitlesApi } from './advanced-metadata-cache.ts';
+import type { AdvancedMetadataCacheTitlesApi } from '../advanced-metadata-cache.ts';
 
 import {
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT
-} from './advanced-metadata-cache.ts';
+} from '../advanced-metadata-cache.ts';
 import { LabelIndexComponent } from './label-index-component.ts';
 
 const VAULT_FILES: Record<string, string> = {

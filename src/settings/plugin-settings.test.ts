@@ -4,9 +4,9 @@ import {
   it
 } from 'vitest';
 
+import { RankingMode } from '../matching/ranking.ts';
+import { SegmentMatchMode } from '../matching/segment-matcher.ts';
 import { PluginSettings } from './plugin-settings.ts';
-import { RankingMode } from './ranking.ts';
-import { SegmentMatchMode } from './segment-matcher.ts';
 
 describe('PluginSettings', () => {
   /*

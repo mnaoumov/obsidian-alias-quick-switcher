@@ -15,27 +15,27 @@ import {
   SuggestModal
 } from 'obsidian';
 
-import type { LabelIndex } from './label-index.ts';
+import type { LabelIndex } from '../label-index/label-index.ts';
 import type {
   RankedCandidate,
   RankingMode
-} from './ranking.ts';
+} from '../matching/ranking.ts';
 import type {
   LabelSource,
   PathMatch,
   PathPosition,
   PropertyLabelSource,
   QueryToken
-} from './segment-matcher.ts';
+} from '../matching/segment-matcher.ts';
 
-import { createCandidateComparator } from './ranking.ts';
+import { createCandidateComparator } from '../matching/ranking.ts';
 import {
   checkIsAliasLike,
   LabelSourceKind,
   matchPath,
   SegmentMatchMode,
   tokenizeQuery
-} from './segment-matcher.ts';
+} from '../matching/segment-matcher.ts';
 
 /**
  * One thing the switcher can offer.

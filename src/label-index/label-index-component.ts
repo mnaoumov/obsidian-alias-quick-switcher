@@ -9,13 +9,13 @@ import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
 import { resolveFolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
 import { watchPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 
-import type { AdvancedMetadataCacheTitlesApi } from './advanced-metadata-cache.ts';
+import type { AdvancedMetadataCacheTitlesApi } from '../advanced-metadata-cache.ts';
 
 import {
   ADVANCED_METADATA_CACHE_API_VERSION_RANGE,
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT
-} from './advanced-metadata-cache.ts';
+} from '../advanced-metadata-cache.ts';
 import { LabelIndex } from './label-index.ts';
 
 interface LabelIndexComponentConstructorParams {

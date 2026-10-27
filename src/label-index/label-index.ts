@@ -25,13 +25,13 @@ import type {
 import { resolveFolderNote } from '@mnaoumov/obsidian-lib/folder-note';
 import { parseFrontMatterAliases } from 'obsidian';
 
-import type { Label } from './segment-matcher.ts';
+import type { Label } from '../matching/segment-matcher.ts';
 
 import {
   ALIAS_LABEL_SOURCE,
   LabelSourceKind,
   REAL_NAME_LABEL_SOURCE
-} from './segment-matcher.ts';
+} from '../matching/segment-matcher.ts';
 
 /**
  * Constructor parameters for {@link LabelIndex}.

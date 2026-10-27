@@ -15,14 +15,14 @@ import {
   it
 } from 'vitest';
 
-import type { Label } from './segment-matcher.ts';
+import type { Label } from '../matching/segment-matcher.ts';
 
-import { LabelIndex } from './label-index.ts';
 import {
   ALIAS_LABEL_SOURCE,
   LabelSourceKind,
   REAL_NAME_LABEL_SOURCE
-} from './segment-matcher.ts';
+} from '../matching/segment-matcher.ts';
+import { LabelIndex } from './label-index.ts';
 
 const VAULT_FILES: Record<string, string> = {
   'Alpha/Bravo/Bravo.md': '---\naliases:\n  - Delta\n---\n',

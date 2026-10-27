@@ -13,7 +13,7 @@ import {
   TARGET_FOLDER_NOTE_PATH,
   TARGET_NOTE_ALIAS,
   TARGET_NOTE_PATH
-} from '../scripts/helpers/generate-performance-vault.ts';
+} from '../../scripts/helpers/generate-performance-vault.ts';
 
 /*
  * The claim the whole design rests on, measured rather than asserted: this switcher answers a whole-vault

@@ -29,15 +29,15 @@ import type {
 } from './alias-quick-switcher-modal.ts';
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { LabelIndex } from '../label-index/label-index.ts';
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { RankingMode } from '../matching/ranking.ts';
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { SegmentMatchMode } from '../matching/segment-matcher.ts';
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { PluginSettings } from '../settings/plugin-settings.ts';
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { AliasQuickSwitcherModal } from './alias-quick-switcher-modal.ts';
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { LabelIndex } from './label-index.ts';
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { PluginSettings } from './plugin-settings.ts';
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { RankingMode } from './ranking.ts';
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { SegmentMatchMode } from './segment-matcher.ts';
 
 /**
  * The fixture from the CDP measurement, plus a non-markdown file and a second folder with no folder note.

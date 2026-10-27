@@ -20,13 +20,13 @@ import {
 } from 'vitest';
 
 import type { MigratableSettings } from './advanced-metadata-cache.ts';
-import type { PluginSettings } from './plugin-settings.ts';
+import type { PluginSettings } from './settings/plugin-settings.ts';
 
 import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
-import { AliasQuickSwitcherComponent } from './alias-quick-switcher-component.ts';
-import { LabelIndexComponent } from './label-index-component.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettingsTab } from './plugin-settings-tab.ts';
+import { LabelIndexComponent } from './label-index/label-index-component.ts';
+import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
+import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
+import { AliasQuickSwitcherComponent } from './switcher/alias-quick-switcher-component.ts';
 
 /*
  * The real `PluginBase` (from `@mnaoumov/obsidian-lib`) drives the lifecycle here —
@@ -98,7 +98,7 @@ vi.mock('@mnaoumov/obsidian-lib/components/settings-migration-component', () => 
   })
 }));
 
-vi.mock('./plugin-settings-component.ts', () => ({
+vi.mock('./settings/plugin-settings-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   PluginSettingsComponent: vi.fn(function () {
     const component = Object.assign(new Component(), {
@@ -115,18 +115,18 @@ vi.mock('./plugin-settings-component.ts', () => ({
   })
 }));
 
-vi.mock('./plugin-settings-tab.ts', () => ({
+vi.mock('./settings/plugin-settings-tab.ts', () => ({
   PluginSettingsTab: vi.fn()
 }));
 
-vi.mock('./label-index-component.ts', () => ({
+vi.mock('./label-index/label-index-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   LabelIndexComponent: vi.fn(function (): Component {
     return new Component();
   })
 }));
 
-vi.mock('./alias-quick-switcher-component.ts', () => ({
+vi.mock('./switcher/alias-quick-switcher-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   AliasQuickSwitcherComponent: vi.fn(function () {
     return new Component();

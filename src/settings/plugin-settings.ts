@@ -1,5 +1,5 @@
-import { RankingMode } from './ranking.ts';
-import { SegmentMatchMode } from './segment-matcher.ts';
+import { RankingMode } from '../matching/ranking.ts';
+import { SegmentMatchMode } from '../matching/segment-matcher.ts';
 
 export class PluginSettings {
   /**

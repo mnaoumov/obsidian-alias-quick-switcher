@@ -18,13 +18,13 @@ registerDemoVaultCoverageSuite({
       'Alpha/Bravo/Charlie.md'
     ]
   },
-  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/plugin-settings.ts' }],
+  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/settings/plugin-settings.ts' }],
   interfaces: [],
   nonTrivialGuard: {
     expectDemoNote: '02 Settings.md',
     expectMember: 'shouldIncludeFolders',
     interfaceName: 'PluginSettings',
-    sourcePath: 'src/plugin-settings.ts'
+    sourcePath: 'src/settings/plugin-settings.ts'
   },
   rootFolder: getRootFolder() ?? process.cwd()
 });

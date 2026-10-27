@@ -116,8 +116,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         desc: 'How many recently-opened files rank above the rest when scores are otherwise tied. Zero turns the recency tiebreak off.',
         name: 'Recent files tiebreak',
         render: (setting) => {
-          setting.addNumber((number) => {
-            this.bind({ propertyName: 'recentFilesBoostCount', valueComponent: number });
+          setting.addNumber(($number) => {
+            this.bind({ propertyName: 'recentFilesBoostCount', valueComponent: $number });
           });
         }
       }),

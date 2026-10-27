@@ -75,12 +75,16 @@ Assign a hotkey to **`Alias Quick Switcher`: Open quick switcher** and type a pa
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
 
-## Similar plugins
+## See also
 
-- [`Quick Switcher++`](https://community.obsidian.md/plugins/darlal-switcher-plus) — an extended switcher with modes for headings, symbols, open tabs, commands and more, and it can show a frontmatter property as the title; it matches an alias only as the whole query on the note itself, never inside a path.
-- [`Another Quick Switcher`](https://community.obsidian.md/plugins/obsidian-another-quick-switcher) — a switcher with configurable searches and sort priorities, where every name match is against the file name or an alias; a path is matched as literal folder text, so an alias cannot stand in for a folder or sit after one.
-- [`Lemons Search`](https://community.obsidian.md/plugins/lemons-search) — a fast fuzzy finder with a file preview, with one search over file paths and a separate one over names and aliases; it never combines the two in one query.
-- [`Omnisearch`](https://community.obsidian.md/plugins/omnisearch) — full-text search across notes, PDFs and images, ranked by relevance; it searches what a note says, where this plugin matches a path segment by segment.
+[My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)
+
+| Plugin | Features | How `Alias Quick Switcher` differs |
+| --- | --- | --- |
+| [`Another Quick Switcher`](https://community.obsidian.md/plugins/obsidian-another-quick-switcher) | Configurable switchers; filename/alias matches; literal folder-path text | Different matching: aliases can represent folders and appear after folder segments |
+| [`Lemons Search`](https://community.obsidian.md/plugins/lemons-search) | Fuzzy finder; preview; separate path and name/alias searches | Different matching: combines paths and aliases segment by segment |
+| [`Omnisearch`](https://community.obsidian.md/plugins/omnisearch) | Ranked full-text search; notes, PDFs and images | Different target: file paths and aliases rather than document contents |
+| [`Quick Switcher++`](https://community.obsidian.md/plugins/darlal-switcher-plus) | Extended switcher modes; headings, symbols, tabs and commands; property titles | Narrower switcher focus: alias-aware matching in every path segment |
 
 Last searched for similar plugins on 2026-10-26.
 
@@ -117,10 +121,6 @@ Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set u
 <a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
 
 <!-- markdownlint-enable MD033 -->
-
-## My other Obsidian resources
-
-[See my other Obsidian resources](https://github.com/mnaoumov/obsidian-resources).
 
 ## License
 

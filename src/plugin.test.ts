@@ -53,7 +53,9 @@ interface HoistedSettingsState {
  * What the stubbed settings component answers, and every edit it was asked to save.
  */
 interface SettingsState {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup replaces this mock state between scenarios.
   editedSettings: HandoverSettings[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup replaces this mock state between scenarios.
   settings: HandoverSettings;
 }
 
@@ -141,7 +143,7 @@ const STRICT_PROXY_TARGET_SYMBOL = Symbol.for('strictProxyTarget');
 
 // `getPluginDependencies` is protected on the base, so a test reads it through a probe.
 interface PluginDependenciesProbe {
-  getPluginDependencies: () => PluginDependency[];
+  readonly getPluginDependencies: () => PluginDependency[];
 }
 
 describe('Plugin', () => {

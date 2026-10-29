@@ -17,6 +17,7 @@ import {
   ADVANCED_METADATA_CACHE_PLUGIN_NAME
 } from './advanced-metadata-cache.ts';
 import { LabelIndexComponent } from './label-index/label-index-component.ts';
+import { PropertyLinkSuggestComponent } from './link-suggest/property-link-suggest-component.ts';
 import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
 import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
 import { AliasQuickSwitcherComponent } from './switcher/alias-quick-switcher-component.ts';
@@ -95,6 +96,13 @@ export class Plugin extends PluginBase {
         commandRegistrar: new PluginCommandRegistrar(this),
         labelIndexComponent,
         pluginSettingsComponent
+      })
+    );
+
+    this.addChild(
+      new PropertyLinkSuggestComponent({
+        app: this.app,
+        labelIndexComponent
       })
     );
 

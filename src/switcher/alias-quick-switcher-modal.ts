@@ -27,6 +27,11 @@ import type {
   PropertyLabelSource,
   QueryToken
 } from '../matching/segment-matcher.ts';
+import type {
+  PropertyFilterContext,
+  PropertyValueCount
+} from '../property-query/property-filter.ts';
+import type { PropertyQuery } from '../property-query/property-query-parser.ts';
 
 import { createCandidateComparator } from '../matching/ranking.ts';
 import {
@@ -36,6 +41,41 @@ import {
   SegmentMatchMode,
   tokenizeQuery
 } from '../matching/segment-matcher.ts';
+import { createPropertyFilterContext } from '../property-query/property-filter-context.ts';
+import {
+  checkPropertyQuery,
+  collectPropertyValues
+} from '../property-query/property-filter.ts';
+import {
+  parsePropertyQuery,
+  quoteValue
+} from '../property-query/property-query-parser.ts';
+
+/**
+ * A row that completes the property value being typed instead of opening a note. Picking it rewrites the
+ * query and keeps the switcher open.
+ */
+export interface PropertyValueCompletion {
+  /**
+   * The whole query the pick turns the input into.
+   */
+  readonly completion: string;
+
+  /**
+   * How many notes hold the value.
+   */
+  readonly count: number;
+
+  /**
+   * The key as the user typed it.
+   */
+  readonly keySource: string;
+
+  /**
+   * The value offered.
+   */
+  readonly value: string;
+}
 
 /**
  * One thing the switcher can offer.
@@ -56,6 +96,11 @@ export interface Suggestion {
    */
   readonly path: string;
 }
+
+/**
+ * Any row the switcher shows.
+ */
+export type SwitcherRow = PropertyValueCompletion | Suggestion;
 
 /**
  * What the switcher reads out of the plugin's settings. Declared in full rather than derived from the
@@ -187,6 +232,12 @@ const PROPERTY_FLAIR_ICON_ID = 'lucide-text';
 const SUGGESTION_LIMIT = 50;
 
 /**
+ * How many values a property term offers to complete while its value is typed. Enough to pick from without
+ * pushing every note row below the fold.
+ */
+const VALUE_COMPLETION_LIMIT = 8;
+
+/**
  * The switcher itself.
  *
  * A plain {@link SuggestModal}, following `obsidian-link-picker`'s picker rather than subclassing
@@ -194,17 +245,26 @@ const SUGGESTION_LIMIT = 50;
  * never rebound, so this is a second switcher the user opts into rather than a replacement of the one
  * their muscle memory already knows.
  */
-export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
+export class AliasQuickSwitcherModal extends SuggestModal<SwitcherRow> {
   private candidates: readonly Candidate[] = [];
   private candidatesByPath = new Map<string, Candidate>();
   private excludedPaths = new PathSettings();
   private readonly labelIndex: LabelIndex;
   private readonly lastOpenFileIndexMap = new Map<string, number>();
+  private readonly propertyFilterContext: PropertyFilterContext;
+
+  /**
+   * The values each typed key holds across the vault, collected once per key per switcher session rather
+   * than once per keystroke.
+   */
+  private readonly propertyValuesByKey = new Map<string, readonly PropertyValueCount[]>();
+
   private readonly settings: SwitcherSettings;
 
   public constructor(params: AliasQuickSwitcherModalConstructorParams) {
     super(params.app);
     this.labelIndex = params.labelIndex;
+    this.propertyFilterContext = createPropertyFilterContext(params.app, params.labelIndex);
     this.settings = params.settings;
 
     addPluginCssClasses(this.containerEl, 'alias-quick-switcher-modal');
@@ -212,53 +272,39 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     this.limit = SUGGESTION_LIMIT;
   }
 
-  public getSuggestions(query: string): Suggestion[] {
-    const tokens = tokenizeQuery(query);
+  public getSuggestions(query: string): SwitcherRow[] {
+    const propertyQuery = parsePropertyQuery(query);
 
-    if (tokens.length === 0) {
-      return this.collectRecentSuggestions();
+    if (propertyQuery.groups.length === 0) {
+      const tokens = tokenizeQuery(query);
+      return tokens.length === 0 ? this.collectRecentSuggestions() : this.matchCandidates(this.candidates, tokens);
     }
 
-    const mode = this.settings.segmentMatchMode;
-    const matched: MatchedSuggestion[] = [];
-
-    for (const candidate of this.candidates) {
-      if (!checkHaystack(candidate.haystack, tokens, mode)) {
-        continue;
-      }
-
-      const match = matchPath({ mode, positions: candidate.positions, tokens });
-
-      if (match) {
-        matched.push({ candidate, match, path: candidate.path });
-      }
-    }
-
-    matched.sort(createCandidateComparator({
-      lastOpenFileIndexMap: this.lastOpenFileIndexMap,
-      mode: this.settings.rankingMode
-    }));
-
-    return deduplicateByOpenTarget(matched);
+    return [...this.collectValueCompletions(query, propertyQuery), ...this.collectPropertySuggestions(propertyQuery)];
   }
 
-  public onChooseSuggestion(suggestion: Suggestion, event_: KeyboardEvent | MouseEvent): void {
+  public onChooseSuggestion(row: SwitcherRow, event_: KeyboardEvent | MouseEvent): void {
+    if (checkIsValueCompletion(row)) {
+      return;
+    }
+
     const shouldOpenInNewLeaf = event_.ctrlKey || event_.metaKey;
     invokeAsyncSafely(async () => {
-      await this.app.workspace.getLeaf(shouldOpenInNewLeaf).openFile(suggestion.candidate.openTarget);
+      await this.app.workspace.getLeaf(shouldOpenInNewLeaf).openFile(row.candidate.openTarget);
     });
   }
 
   public override onOpen(): void {
     this.excludedPaths = new PathSettings();
     this.excludedPaths.excludePaths = [...this.settings.excludedPathPatterns];
+    this.propertyValuesByKey.clear();
     this.rememberRecentFiles();
     this.candidates = this.buildCandidates();
     this.candidatesByPath = new Map(this.candidates.map((candidate) => [candidate.path, candidate]));
     super.onOpen();
   }
 
-  public renderSuggestion(suggestion: Suggestion, el: HTMLElement): void {
+  public renderSuggestion(row: SwitcherRow, el: HTMLElement): void {
     el.empty();
 
     // The row is the BUILT-IN switcher's own shape, measured off it rather than guessed at: a
@@ -268,38 +314,29 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     // than carrying a private copy that no theme has ever seen.
     el.addClass('mod-complex');
 
-    const contentEl = el.createDiv({ cls: 'suggestion-content' });
-    const titleEl = contentEl.createDiv({ cls: 'suggestion-title' });
-
-    if (suggestion.candidate.isFolder) {
-      el.addClass('alias-quick-switcher-modal__folder');
-      setIcon(titleEl.createSpan({ cls: 'alias-quick-switcher-modal__icon' }), 'lucide-folder');
-    }
-
-    const renderedPath = this.renderLabels(suggestion, titleEl);
-
-    // The real path is shown ONLY when the rendering above is not already it. Repeating an identical path
-    // under itself is noise, while omitting a DIFFERENT one leaves the user unable to tell what they are
-    // about to open — which is the whole point of the two-line row.
-    if (renderedPath !== suggestion.candidate.plainPath) {
-      contentEl.createDiv({ cls: 'suggestion-note', text: suggestion.candidate.displayPath });
-    }
-
-    // One flair per distinct kind of name the row was actually reached by, in path order — so they read
-    // left to right in the same order as the labels they explain. Obsidian anticipates several flairs on
-    // one row and spaces them itself (`.suggestion-flair:not(:last-child)` carries a margin), so this
-    // needs no rule in this plugin's stylesheet.
-    const flairs = collectSourceFlairs(suggestion);
-
-    if (flairs.length === 0) {
+    if (checkIsValueCompletion(row)) {
+      renderValueCompletion(row, el);
       return;
     }
 
-    const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+    this.renderNoteSuggestion(row, el);
+  }
 
-    for (const flair of flairs) {
-      setIcon(auxEl.createSpan({ attr: { 'aria-label': flair.ariaLabel }, cls: 'suggestion-flair' }), flair.iconId);
+  /**
+   * Picking a value completion rewrites the query instead of closing the switcher, so the user goes straight on
+   * to the notes the completed term finds.
+   *
+   * @param row - The picked row.
+   * @param event_ - The pick.
+   */
+  public override selectSuggestion(row: SwitcherRow, event_: KeyboardEvent | MouseEvent): void {
+    if (!checkIsValueCompletion(row)) {
+      super.selectSuggestion(row, event_);
+      return;
     }
+
+    this.inputEl.value = row.completion;
+    this.inputEl.dispatchEvent(new Event('input'));
   }
 
   private buildAncestorPositions(abstractFile: TAbstractFile): PathPosition[] {
@@ -394,6 +431,28 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     };
   }
 
+  /**
+   * The notes a query with property terms finds.
+   *
+   * With no path text beside the terms, every note the terms find is listed, recently opened first and then by
+   * path. Folder rows are left out there, because the folder note's own row already stands for it.
+   *
+   * @param propertyQuery - The parsed query.
+   * @returns The note rows.
+   */
+  private collectPropertySuggestions(propertyQuery: PropertyQuery): Suggestion[] {
+    const filtered = this.candidates.filter((candidate) => checkPropertyQuery({ context: this.propertyFilterContext, file: candidate.openTarget, query: propertyQuery }));
+    const tokens = tokenizeQuery(propertyQuery.pathQuery);
+
+    return tokens.length > 0 ? this.matchCandidates(filtered, tokens) : filtered
+      .filter((candidate) => !candidate.isFolder)
+      .sort((left, right) =>
+        (this.lastOpenFileIndexMap.get(left.path) ?? Infinity) - (this.lastOpenFileIndexMap.get(right.path) ?? Infinity)
+        || left.path.localeCompare(right.path)
+      )
+      .map((candidate) => ({ candidate, match: null, path: candidate.path }));
+  }
+
   private collectRecentSuggestions(): Suggestion[] {
     const suggestions: Suggestion[] = [];
 
@@ -413,6 +472,69 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     }
 
     return suggestions;
+  }
+
+  /**
+   * Offers values for the property term whose value is being typed.
+   *
+   * @param query - The query as typed.
+   * @param propertyQuery - The parsed query.
+   * @returns The completion rows, most common value first.
+   */
+  private collectValueCompletions(query: string, propertyQuery: PropertyQuery): PropertyValueCompletion[] {
+    const openValueTerm = propertyQuery.openValueTerm;
+
+    if (!openValueTerm) {
+      return [];
+    }
+
+    let values = this.propertyValuesByKey.get(openValueTerm.keySource);
+
+    if (!values) {
+      values = collectPropertyValues({
+        context: this.propertyFilterContext,
+        files: this.candidates.filter((candidate) => !candidate.isFolder).map((candidate) => candidate.openTarget),
+        keyPattern: ensureNonNullable(propertyQuery.groups.at(-1)?.at(-1), 'An open value term is always the last term read').key
+      });
+      this.propertyValuesByKey.set(openValueTerm.keySource, values);
+    }
+
+    const partialValue = openValueTerm.partialValue.toLowerCase();
+    const prefix = query.slice(0, openValueTerm.startIndex);
+
+    return values
+      .filter(({ value }) => value.toLowerCase().includes(partialValue))
+      .slice(0, VALUE_COMPLETION_LIMIT)
+      .map(({ count, value }) => ({
+        completion: `${prefix}[${openValueTerm.keySource}:${quoteValue(value)}] `,
+        count,
+        keySource: openValueTerm.keySource,
+        value
+      }));
+  }
+
+  private matchCandidates(candidates: readonly Candidate[], tokens: readonly QueryToken[]): Suggestion[] {
+    const mode = this.settings.segmentMatchMode;
+    const matched: MatchedSuggestion[] = [];
+
+    for (const candidate of candidates) {
+      if (!checkHaystack(candidate.haystack, tokens, mode)) {
+        continue;
+      }
+
+      const match = matchPath({ mode, positions: candidate.positions, tokens });
+
+      if (match) {
+        matched.push({ candidate, match, path: candidate.path });
+      }
+    }
+
+    matched.sort(createCandidateComparator({
+      lastOpenFileIndexMap: this.lastOpenFileIndexMap,
+      mode: this.settings.rankingMode
+    }));
+
+    return deduplicateByOpenTarget(matched);
   }
 
   private rememberRecentFiles(): void {
@@ -474,6 +596,41 @@ export class AliasQuickSwitcherModal extends SuggestModal<Suggestion> {
     }
 
     return renderedParts.join('/');
+  }
+
+  private renderNoteSuggestion(suggestion: Suggestion, el: HTMLElement): void {
+    const contentEl = el.createDiv({ cls: 'suggestion-content' });
+    const titleEl = contentEl.createDiv({ cls: 'suggestion-title' });
+
+    if (suggestion.candidate.isFolder) {
+      el.addClass('alias-quick-switcher-modal__folder');
+      setIcon(titleEl.createSpan({ cls: 'alias-quick-switcher-modal__icon' }), 'lucide-folder');
+    }
+
+    const renderedPath = this.renderLabels(suggestion, titleEl);
+
+    // The real path is shown ONLY when the rendering above is not already it. Repeating an identical path
+    // under itself is noise, while omitting a DIFFERENT one leaves the user unable to tell what they are
+    // about to open — which is the whole point of the two-line row.
+    if (renderedPath !== suggestion.candidate.plainPath) {
+      contentEl.createDiv({ cls: 'suggestion-note', text: suggestion.candidate.displayPath });
+    }
+
+    // One flair per distinct kind of name the row was actually reached by, in path order — so they read
+    // left to right in the same order as the labels they explain. Obsidian anticipates several flairs on
+    // one row and spaces them itself (`.suggestion-flair:not(:last-child)` carries a margin), so this
+    // needs no rule in this plugin's stylesheet.
+    const flairs = collectSourceFlairs(suggestion);
+
+    if (flairs.length === 0) {
+      return;
+    }
+
+    const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+
+    for (const flair of flairs) {
+      setIcon(auxEl.createSpan({ attr: { 'aria-label': flair.ariaLabel }, cls: 'suggestion-flair' }), flair.iconId);
+    }
   }
 }
 
@@ -565,6 +722,10 @@ function checkIsLeafOnlyAliasMatch(suggestion: Suggestion): boolean {
   // the rendering is already the plain path and there is nothing to explain — is not caught by this.
   return leafMatch !== undefined && leafMatch !== null && checkIsAliasLike(leafMatch.source)
     && suggestion.match.positions.every((positionMatch, index) => index === leafIndex || positionMatch === null);
+}
+
+function checkIsValueCompletion(row: SwitcherRow): row is PropertyValueCompletion {
+  return 'completion' in row;
 }
 
 function checkSubsequence(haystack: string, token: string): boolean {
@@ -659,4 +820,20 @@ function deduplicateByOpenTarget(suggestions: readonly MatchedSuggestion[]): Sug
  */
 function readRealName(position: PathPosition): string {
   return ensureNonNullable(position.labels[0], 'Every position is built with its real name first').text;
+}
+
+/**
+ * Renders a value completion: the term it completes to, and how many notes hold the value — the same two-line
+ * shape as a note row, with the property marker a property hit already carries.
+ *
+ * @param row - The completion.
+ * @param el - The row element.
+ */
+function renderValueCompletion(row: PropertyValueCompletion, el: HTMLElement): void {
+  el.addClass('alias-quick-switcher-modal__value-completion');
+  const contentEl = el.createDiv({ cls: 'suggestion-content' });
+  contentEl.createDiv({ cls: 'suggestion-title', text: `[${row.keySource}:${row.value}]` });
+  contentEl.createDiv({ cls: 'suggestion-note', text: row.count === 1 ? '1 note' : `${String(row.count)} notes` });
+  const auxEl = el.createDiv({ cls: 'suggestion-aux' });
+  setIcon(auxEl.createSpan({ attr: { 'aria-label': row.keySource }, cls: 'suggestion-flair' }), PROPERTY_FLAIR_ICON_ID);
 }

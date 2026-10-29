@@ -75,6 +75,31 @@ Assign a hotkey to **`Alias Quick Switcher`: Open quick switcher** and type a pa
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
 
+### Find a note by a property
+
+Type a property term in core Search's own syntax to list the notes whose frontmatter holds a value: `[isoCode:uk]` finds the note with `isoCode: uk`, so a code never has to become an alias to be findable. Path text beside the term narrows the list: `[isoCode:uk] Reference`.
+
+The same term works in a link. Type `[[` and then the term, as in `[[[iataCode:KBP]`, pick the note, and an ordinary link to it is inserted: `[[Boryspil]]`, in your usual link format. The term itself is never written into the note, so the link keeps working in a vault that does not have this plugin. Any other link text goes to Obsidian's own link suggestions as before.
+
+While you type a value, the values that property already holds across the vault are offered first; picking one completes the term.
+
+| Term | Finds notes where |
+| --- | --- |
+| `[isoCode:uk]` | `isoCode` contains `uk`: `uk`, `UKR` |
+| `[isoCode:"uk"]` | `isoCode` holds the whole word `uk`, not `UKR` |
+| `[city:"San Miguel de Allende"]` | a value with spaces, quoted |
+| `["birth place":Kyiv]` | a key with a space, `:` or `]` in it, quoted (an unquoted key with a space works too) |
+| `[quote:"say \"hi\""]` | a value with a quote in it, escaped with `\` |
+| `[langs:uk]` | any element of a list holds `uk` |
+| `[location:Київ]` | a link value points to a note whose name, alias or title is `Київ` |
+| `[isoCode]` | the property is there |
+| `[empty:null]` | the property is there and empty |
+| `[status:Draft OR Published]` | either value; parentheses group |
+| `[status:Draft] OR [isoCode:uk]` | either term; two terms side by side must both hold |
+| `[isoCode:/^uk$/]` | a regular expression, for a key or a value |
+
+Matching is case-insensitive, and an unquoted key or value matches part of a word, as in core Search. Every row of this table was checked against core Search in a real Obsidian, and the plugin's test suite repeats that check on every run. The one difference is link values: core Search matches only a link's raw text (`[location:Kyiv]` finds `[[Kyiv City]]`), while this plugin also matches the names of the note the link points to. Like core Search, a term does not look inside a nested property such as `address: { city: Lviv }`. Two things core Search has are not supported here: parentheses around whole terms, and negating a term with `-`.
+
 ## See also
 
 [My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)

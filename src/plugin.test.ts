@@ -24,6 +24,7 @@ import type { PluginSettings } from './settings/plugin-settings.ts';
 
 import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
 import { LabelIndexComponent } from './label-index/label-index-component.ts';
+import { PropertyLinkSuggestComponent } from './link-suggest/property-link-suggest-component.ts';
 import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
 import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
 import { AliasQuickSwitcherComponent } from './switcher/alias-quick-switcher-component.ts';
@@ -128,6 +129,13 @@ vi.mock('./label-index/label-index-component.ts', () => ({
   })
 }));
 
+vi.mock('./link-suggest/property-link-suggest-component.ts', () => ({
+  // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
+  PropertyLinkSuggestComponent: vi.fn(function () {
+    return new Component();
+  })
+}));
+
 vi.mock('./switcher/alias-quick-switcher-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback, func-names -- mock must be constructable with `new` and return a real loadable Component.
   AliasQuickSwitcherComponent: vi.fn(function () {
@@ -213,6 +221,7 @@ describe('Plugin', () => {
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(LabelIndexComponent).toHaveBeenCalledOnce();
     expect(AliasQuickSwitcherComponent).toHaveBeenCalledOnce();
+    expect(PropertyLinkSuggestComponent).toHaveBeenCalledOnce();
   });
 
   it('should register the open demo vault command handler', async () => {

@@ -6,6 +6,7 @@ import type { App } from 'obsidian-test-mocks/obsidian';
 
 import { resolveFolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   beforeEach,
   describe,
@@ -24,6 +25,7 @@ vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-context', () => ({
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import type {
+  PropertyValueCompletion,
   Suggestion,
   SwitcherSettings
 } from './alias-quick-switcher-modal.ts';
@@ -350,6 +352,110 @@ describe('choosing a suggestion', () => {
   });
 });
 
+describe('property terms', () => {
+  const PROPERTY_FILES: Record<string, string> = {
+    'Places/Kyiv City.md': '---\naliases:\n  - Київ\n---\n',
+    'Reference/Airport/Boryspil.md': '---\niataCode: KBP\nlocation: "[[Kyiv City]]"\n---\n',
+    'Reference/Language/English.md': '---\nisoCode: en\n---\n',
+    'Reference/Language/Ukrainian.md': '---\nisoCode: uk\n---\n',
+    'Reference/Language/Ukrainian Sign.md': '---\nisoCode: ukl\n---\n'
+  };
+
+  beforeEach(async () => {
+    const { App: AppMock } = await import('obsidian-test-mocks/obsidian');
+    appMock = AppMock.createConfigured__({ files: { ...VAULT_FILES, ...PROPERTY_FILES } });
+    app = appMock.asOriginalType__();
+    castTo<RecentFileTrackerMock>(app).workspace.recentFileTracker = { lastOpenFiles: [] };
+    app.workspace.getLeaf = vi.fn().mockReturnValue(castTo<WorkspaceLeaf>({ openFile: openFileMock }));
+  });
+
+  it('should list every note the term finds, by path', () => {
+    expect(openTargetsFor('[isoCode:uk]')).toStrictEqual(['Reference/Language/Ukrainian Sign.md', 'Reference/Language/Ukrainian.md']);
+  });
+
+  it('should list a recently opened match first', () => {
+    castTo<RecentFileTrackerMock>(app).workspace.recentFileTracker.lastOpenFiles = ['Reference/Language/Ukrainian.md'];
+    expect(openTargetsFor('[isoCode:uk]')).toStrictEqual(['Reference/Language/Ukrainian.md', 'Reference/Language/Ukrainian Sign.md']);
+  });
+
+  it('should match a quoted value as a whole word', () => {
+    expect(openTargetsFor('[isoCode:"uk"]')).toStrictEqual(['Reference/Language/Ukrainian.md']);
+  });
+
+  it('should narrow the term\'s notes by the path text beside it', () => {
+    expect(openTargetsFor('[isoCode:uk] Sign')).toStrictEqual(['Reference/Language/Ukrainian Sign.md']);
+  });
+
+  it('should match a link value by the alias of the note it points to', () => {
+    expect(openTargetsFor('[location:Київ]')).toStrictEqual(['Reference/Airport/Boryspil.md']);
+  });
+
+  it('should find nothing for a value no note holds', () => {
+    expect(openTargetsFor('[isoCode:zz]')).toStrictEqual([]);
+  });
+
+  describe('value completion', () => {
+    it('should offer the values the key holds while the value is typed', () => {
+      expect(completionsFor('Lang [isoCode:u')).toStrictEqual([
+        { completion: 'Lang [isoCode:"uk"] ', count: 1, keySource: 'isoCode', value: 'uk' },
+        { completion: 'Lang [isoCode:"ukl"] ', count: 1, keySource: 'isoCode', value: 'ukl' }
+      ]);
+    });
+
+    it('should offer nothing once the term is closed', () => {
+      expect(completionsFor('[isoCode:u]')).toStrictEqual([]);
+    });
+
+    it('should collect a key\'s values once per session', () => {
+      const modal = createModal();
+      const getFileCacheSpy = vi.spyOn(app.metadataCache, 'getFileCache');
+      modal.getSuggestions('[isoCode:u');
+      const callsForFirstKeystroke = getFileCacheSpy.mock.calls.length;
+      modal.getSuggestions('[isoCode:uk');
+      expect(getFileCacheSpy.mock.calls.length - callsForFirstKeystroke).toBeLessThan(callsForFirstKeystroke);
+    });
+
+    it('should render a completion with its note count and the property marker', () => {
+      const modal = createModal();
+      const el = createDiv();
+      modal.renderSuggestion({ completion: '[isoCode:"uk"] ', count: 2, keySource: 'isoCode', value: 'uk' }, el);
+      expect(el.querySelector('.suggestion-title')?.textContent).toBe('[isoCode:uk]');
+      expect(el.querySelector('.suggestion-note')?.textContent).toBe('2 notes');
+      expect(el.querySelector('.suggestion-flair')?.getAttribute('aria-label')).toBe('isoCode');
+    });
+
+    it('should say one note in the singular', () => {
+      const modal = createModal();
+      const el = createDiv();
+      modal.renderSuggestion({ completion: '', count: 1, keySource: 'isoCode', value: 'uk' }, el);
+      expect(el.querySelector('.suggestion-note')?.textContent).toBe('1 note');
+    });
+
+    it('should rewrite the query on a pick, and open nothing', () => {
+      const modal = createModal();
+      const inputListener = vi.fn();
+      modal.inputEl.addEventListener('input', inputListener);
+      modal.selectSuggestion({ completion: '[isoCode:"uk"] ', count: 1, keySource: 'isoCode', value: 'uk' }, new MouseEvent('click'));
+      expect(modal.inputEl.value).toBe('[isoCode:"uk"] ');
+      expect(inputListener).toHaveBeenCalled();
+      expect(openFileMock).not.toHaveBeenCalled();
+    });
+
+    it('should open nothing when a completion reaches the choose handler', () => {
+      const modal = createModal();
+      modal.onChooseSuggestion({ completion: '', count: 1, keySource: 'isoCode', value: 'uk' }, new MouseEvent('click'));
+      expect(openFileMock).not.toHaveBeenCalled();
+    });
+
+    it('should open a note row picked through the same handler', () => {
+      const modal = createModal();
+      const row = ensureNonNullable(modal.getSuggestions('[isoCode:"uk"]')[0]);
+      modal.selectSuggestion(row, new MouseEvent('click'));
+      expect(openFileMock).toHaveBeenCalledWith(expect.objectContaining({ path: 'Reference/Language/Ukrainian.md' }));
+    });
+  });
+});
+
 describe('the algorithm settings', () => {
   it('should reject a non-contiguous segment under substring matching', () => {
     expect(openTargetsFor('Chrl')).toStrictEqual([]);
@@ -369,6 +475,10 @@ describe('the algorithm settings', () => {
     expect(openTargetsFor('Bravo')).toContain('Alpha/Bravo/Bravo.md');
   });
 });
+
+function completionsFor(query: string): PropertyValueCompletion[] {
+  return createModal().getSuggestions(query).filter((row): row is PropertyValueCompletion => 'completion' in row);
+}
 
 function createModal(): AliasQuickSwitcherModal {
   const modal = new AliasQuickSwitcherModal({
@@ -402,5 +512,5 @@ function renderFirst(query: string): HTMLElement {
 }
 
 function suggestionsFor(query: string): Suggestion[] {
-  return createModal().getSuggestions(query);
+  return createModal().getSuggestions(query).filter((row): row is Suggestion => 'candidate' in row);
 }

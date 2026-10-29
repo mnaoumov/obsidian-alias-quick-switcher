@@ -7,7 +7,7 @@ import process from 'node:process';
 // setting is documented in a note, and that the guard note/member still exist
 // (rename drift).
 //
-// The `Alpha/` notes are the fixture the plugin is demonstrated ON, not lessons about it, so they sit
+// The `Alpha/` and `Reference/` notes are the fixture the plugin is demonstrated ON, not lessons about it, so they sit
 // outside the authoring checks - they deliberately carry aliases and no explanatory prose, because that
 // is exactly the shape the switcher has to resolve.
 registerDemoVaultCoverageSuite({
@@ -15,7 +15,9 @@ registerDemoVaultCoverageSuite({
     excludedNotes: [
       'README.md',
       'Alpha/Bravo/Bravo.md',
-      'Alpha/Bravo/Charlie.md'
+      'Alpha/Bravo/Charlie.md',
+      'Reference/English.md',
+      'Reference/Ukrainian.md'
     ]
   },
   configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/settings/plugin-settings.ts' }],

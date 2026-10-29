@@ -62,3 +62,5 @@ This plugin registers one command and patches nothing. `Ctrl/Cmd + O` keeps open
 ## Folder notes
 
 A folder has no frontmatter of its own, so its aliases live on its **folder note** — the note that describes the folder. This vault uses the default convention, `Alpha/Bravo/Bravo.md`, but the plugin does not assume it: if the [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin is installed, its live configuration decides which note belongs to a folder, including a custom name and whether the note sits inside the folder or beside it. Nothing is copied into this plugin's settings, so reconfiguring that plugin needs no migration here.
+
+A note can also be found by a frontmatter property rather than by a name, as in `[isoCode:uk]`. That is what [05 Properties](<./05 Properties.md>) is about.

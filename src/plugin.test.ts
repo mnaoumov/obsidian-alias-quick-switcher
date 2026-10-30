@@ -3,6 +3,7 @@ import type { SettingsMigrationComponentConstructorParams } from '@mnaoumov/obsi
 import type { PublishPluginApiParams } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 import type { PluginManifest } from 'obsidian';
 
+import { OpenBugReportCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-bug-report-command-handler';
 import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
 import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
 import { SettingsMigrationComponent } from '@mnaoumov/obsidian-lib/components/settings-migration-component';
@@ -224,7 +225,7 @@ describe('Plugin', () => {
     expect(PropertyLinkSuggestComponent).toHaveBeenCalledOnce();
   });
 
-  it('should register the open demo vault command handler', async () => {
+  it('should register the report bug and open demo vault command handlers', async () => {
     const plugin = new Plugin(app.asOriginalType__(), manifest);
     await plugin.onload();
 
@@ -232,7 +233,7 @@ describe('Plugin', () => {
     // its own batch through the same spy - so build every batch and look across them.
     const commandHandlers = registerCommandHandlers.mock.calls
       .flatMap(([commandHandlerFactory]) => castTo<() => unknown[]>(commandHandlerFactory)());
-    expect(commandHandlers).toEqual(expect.arrayContaining([expect.any(OpenDemoVaultCommandHandler)]));
+    expect(commandHandlers).toEqual(expect.arrayContaining([expect.any(OpenBugReportCommandHandler), expect.any(OpenDemoVaultCommandHandler)]));
   });
 
   describe('Advanced Metadata Cache dependency', () => {

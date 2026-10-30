@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Filing an issue (for AI agents and humans)
+
+Open issues through the [issue forms](https://github.com/mnaoumov/obsidian-alias-quick-switcher/issues/new/choose), not as blank issues.
+
+Filing from the CLI or the API (`gh issue create --body`, or an AI agent filing for you) skips the form, and `gh issue create --template` cannot load an issue form. In that case, open the matching form in [`.github/ISSUE_TEMPLATE/`](https://github.com/mnaoumov/obsidian-alias-quick-switcher/tree/HEAD/.github/ISSUE_TEMPLATE), copy every field as a `### <label>` heading in the form's order, and fill in each one. Always state the plugin version, the Obsidian version and your operating system.
+
 ## Overview
 
 `Alias Quick Switcher` matches a path-shaped query segment by segment, where each segment may be satisfied by a real name **or** by an alias — the note's own aliases for the leaf, and the alias on a folder's folder note for an ancestor. Obsidian's built-in switcher scores a candidate as `max(fuzzy(query, path), fuzzy(query, alias))`, so path and aliases are separate match targets that are never combined; that is precisely the gap this plugin closes.

@@ -20,6 +20,7 @@ import type { Label } from '../matching/segment-matcher.ts';
 import {
   ALIAS_LABEL_SOURCE,
   LabelSourceKind,
+  LINK_TEXT_LABEL_SOURCE,
   REAL_NAME_LABEL_SOURCE
 } from '../matching/segment-matcher.ts';
 import { LabelIndex } from './label-index.ts';
@@ -42,6 +43,33 @@ beforeEach(() => {
   app = appMock.asOriginalType__();
   resolveNameCallCount = 0;
   labelIndex = new LabelIndex({ app, folderNoteConfig: buildCountingConfig(), titlePropertyNames: [] });
+});
+
+describe('setLinkTextsReader', () => {
+  it('should add link texts after the other names, dropping one that repeats a name already there', () => {
+    labelIndex.setLinkTextsReader((target) => target.path === 'Alpha/Bravo/Charlie.md' ? ['echo', 'Kilo'] : null);
+    expect(labelsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual([
+      realNameLabel('Charlie'),
+      aliasLabel('Echo'),
+      { source: LINK_TEXT_LABEL_SOURCE, text: 'Kilo' }
+    ]);
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([realNameLabel('Golf')]);
+  });
+
+  it('should keep its memoized answers when handed the same reader again, and drop them for a new one', () => {
+    function reader(): string[] {
+      return ['Kilo'];
+    }
+
+    labelIndex.setLinkTextsReader(reader);
+    const labels = labelsOfFile('Alpha/Bravo/Golf.md');
+
+    labelIndex.setLinkTextsReader(reader);
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toBe(labels);
+
+    labelIndex.setLinkTextsReader(null);
+    expect(labelsOfFile('Alpha/Bravo/Golf.md')).toStrictEqual([realNameLabel('Golf')]);
+  });
 });
 
 describe('getFileLabels', () => {

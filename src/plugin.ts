@@ -87,7 +87,8 @@ export class Plugin extends PluginBase {
 
     const labelIndexComponent = this.addChild(
       new LabelIndexComponent({
-        app: this.app
+        app: this.app,
+        pluginSettingsComponent
       })
     );
 

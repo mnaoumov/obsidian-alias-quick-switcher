@@ -27,13 +27,14 @@ import { downloadReleasedPlugin } from './download-released-plugin.ts';
 export const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
 /**
- * The release seeded. `2.0.3` is the first release built on `@mnaoumov/obsidian-lib` 6, the major this plugin is
- * built on: the plugin-API registry lives in that library's shared-state bag, and a provider on an older major
- * publishes where this plugin never looks, so the dependency gate would never open. Its contract carries
- * `getTitlePropertyNames` and the `migrateSettings` handover, so the retired setting's offer is driven against the
- * real dialog too.
+ * The release seeded. `2.4.0` is the first release whose contract (`1.9.0`) publishes `getLinkTexts` and
+ * `onLinkTextsChanged`, with its `Link texts` module on by default, so the link-text suites drive the real index. It
+ * is built on the same `@mnaoumov/obsidian-lib` major as this plugin, which it has to be: the plugin-API registry
+ * lives in that library's shared-state bag, and a provider on another major publishes where this plugin never
+ * looks, so the dependency gate would never open. Its contract also carries `getTitlePropertyNames` and the
+ * `migrateSettings` handover, so the retired setting's offer is driven against the real dialog too.
  */
-export const ADVANCED_METADATA_CACHE_VERSION = '2.0.3';
+export const ADVANCED_METADATA_CACHE_VERSION = '2.4.0';
 
 /**
  * The repository publishing that release.

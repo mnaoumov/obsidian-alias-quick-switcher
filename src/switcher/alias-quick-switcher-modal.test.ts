@@ -78,6 +78,12 @@ let settings: PluginSettings;
  */
 let titlePropertyNames: string[];
 
+/**
+ * The link texts `Advanced Metadata Cache` would answer with, by target path. Empty means no reader is installed,
+ * which is what the index sees while the setting is off or the provider is older than contract `1.9.0`.
+ */
+let linkTextsByPath: Map<string, string[]>;
+
 beforeEach(async () => {
   vi.restoreAllMocks();
   const { App: AppMock } = await import('obsidian-test-mocks/obsidian');
@@ -88,6 +94,7 @@ beforeEach(async () => {
   app.workspace.getLeaf = vi.fn().mockReturnValue(castTo<WorkspaceLeaf>({ openFile: openFileMock }));
   settings = new PluginSettings();
   titlePropertyNames = [];
+  linkTextsByPath = new Map();
 });
 
 describe('the nine query forms measured against the built-in switcher', () => {
@@ -278,6 +285,31 @@ describe('renderSuggestion', () => {
     });
   });
 
+  describe('a row reached by a link text', () => {
+    it('should flair it with the link marker and render the text alone over the real path', () => {
+      linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Juliett']);
+      const el = renderFirst('Juliett');
+      expect(flairLabelsOf('Juliett')).toStrictEqual(['Link text']);
+      expect(el.querySelector('.suggestion-title')?.textContent).toBe('Juliett');
+      expect(el.querySelector('.suggestion-note')?.textContent).toBe('Alpha/Bravo/Charlie');
+    });
+
+    it('should rank it below a note that answers to the same text as an alias', () => {
+      // `Echo` is Charlie's alias, and some note also links India as `[Echo](India.md)`.
+      linkTextsByPath.set('Alpha/Hotel/India.md', ['Echo']);
+      expect(openTargetsFor('Echo')).toStrictEqual(['Alpha/Bravo/Charlie.md', 'Alpha/Hotel/India.md']);
+    });
+
+    it('should find an attachment by its link text once non-markdown files are offered', () => {
+      linkTextsByPath.set('Diagram.canvas', ['Whiteboard']);
+      expect(openTargetsFor('Whiteboard')).toStrictEqual([]);
+
+      settings.shouldIncludeNonMarkdownFiles = true;
+
+      expect(openTargetsFor('Whiteboard')).toStrictEqual(['Diagram.canvas']);
+    });
+  });
+
   it('should highlight only the characters the query covered', () => {
     const el = renderFirst('Alpha/Delta/Ech');
     expect([...el.querySelectorAll('.suggestion-highlight')].map((highlight) => highlight.textContent))
@@ -390,6 +422,11 @@ describe('property terms', () => {
     expect(openTargetsFor('[location:Київ]')).toStrictEqual(['Reference/Airport/Boryspil.md']);
   });
 
+  it('should not match a link value by a link text of the note it points to', () => {
+    linkTextsByPath.set('Places/Kyiv City.md', ['the capital']);
+    expect(openTargetsFor('[location:capital]')).toStrictEqual([]);
+  });
+
   it('should find nothing for a value no note holds', () => {
     expect(openTargetsFor('[isoCode:zz]')).toStrictEqual([]);
   });
@@ -481,13 +518,19 @@ function completionsFor(query: string): PropertyValueCompletion[] {
 }
 
 function createModal(): AliasQuickSwitcherModal {
+  const labelIndex = new LabelIndex({
+    app,
+    folderNoteConfig: resolveFolderNoteConfig({ app }),
+    titlePropertyNames
+  });
+
+  if (linkTextsByPath.size > 0) {
+    labelIndex.setLinkTextsReader((file) => linkTextsByPath.get(file.path) ?? []);
+  }
+
   const modal = new AliasQuickSwitcherModal({
     app,
-    labelIndex: new LabelIndex({
-      app,
-      folderNoteConfig: resolveFolderNoteConfig({ app }),
-      titlePropertyNames
-    }),
+    labelIndex,
     settings: castTo<SwitcherSettings>(settings)
   });
   modal.onOpen();

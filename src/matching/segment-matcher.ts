@@ -54,6 +54,13 @@ export enum LabelSourceKind {
   Alias = 'Alias',
 
   /**
+   * The display text a link pointing at the file was written with — `alpha` for `[alpha](bravo.md)` — as
+   * `Advanced Metadata Cache`'s `Link texts` module reports it. Nobody declared it a name, so it ranks below
+   * every name somebody did declare: see {@link MatchTier.LeafLinkText}.
+   */
+  LinkText = 'LinkText',
+
+  /**
    * The value of a configured name-bearing frontmatter property other than `aliases`.
    */
   Property = 'Property',
@@ -86,9 +93,16 @@ export enum MatchTier {
   LeafAlias = 2,
 
   /**
+   * The leaf matched only by a link text. Below an alias or a title because those are names the note was
+   * GIVEN, while a link text is only what some other note happened to call it; above an ancestor-only hit,
+   * because the leaf itself was still reached.
+   */
+  LeafLinkText = 3,
+
+  /**
    * The leaf matched nothing — only ancestors did.
    */
-  AncestorOnly = 3
+  AncestorOnly = 4
 }
 
 /**
@@ -114,8 +128,9 @@ export enum SegmentMatchMode {
  */
 enum LeafKind {
   Unmatched = 0,
-  Alias = 1,
-  RealName = 2
+  LinkText = 1,
+  Alias = 2,
+  RealName = 3
 }
 /* eslint-enable no-magic-numbers -- The numbers ARE the meaning here. */
 
@@ -144,7 +159,14 @@ export interface Label {
 /**
  * Where one label came from.
  */
-export type LabelSource = AliasLabelSource | PropertyLabelSource | RealNameLabelSource;
+export type LabelSource = AliasLabelSource | LinkTextLabelSource | PropertyLabelSource | RealNameLabelSource;
+
+/**
+ * A label that is the display text of a link pointing at the file.
+ */
+export interface LinkTextLabelSource {
+  readonly kind: LabelSourceKind.LinkText;
+}
 
 /**
  * Parameters for {@link matchPath}.
@@ -293,6 +315,11 @@ export interface RealNameLabelSource {
 export const ALIAS_LABEL_SOURCE: AliasLabelSource = { kind: LabelSourceKind.Alias };
 
 /**
+ * The source of a label that is a link text. Shared for the same reason as {@link ALIAS_LABEL_SOURCE}.
+ */
+export const LINK_TEXT_LABEL_SOURCE: LinkTextLabelSource = { kind: LabelSourceKind.LinkText };
+
+/**
  * The source of a label that is a real name. Shared for the same reason as {@link ALIAS_LABEL_SOURCE}.
  */
 export const REAL_NAME_LABEL_SOURCE: RealNameLabelSource = { kind: LabelSourceKind.RealName };
@@ -300,7 +327,7 @@ export const REAL_NAME_LABEL_SOURCE: RealNameLabelSource = { kind: LabelSourceKi
 /**
  * How many members {@link LeafKind} has, used to pack it into a state key.
  */
-const LEAF_KIND_COUNT = 3;
+const LEAF_KIND_COUNT = 4;
 
 /**
  * How many values a boolean packs into, used to fold one into a state key.
@@ -434,7 +461,7 @@ class PathMatcher {
     // Best tier first, so the comparison below is exercised in both directions rather than only ever
     // improving. Which order the states are visited in must not change the answer — the comparison is what
     // decides, not the enumeration.
-    for (const leafKind of [LeafKind.RealName, LeafKind.Alias, LeafKind.Unmatched]) {
+    for (const leafKind of [LeafKind.RealName, LeafKind.Alias, LeafKind.LinkText, LeafKind.Unmatched]) {
       for (const wasAncestorAliasUsed of [false, true]) {
         for (let pendingSkipCount = 0; pendingSkipCount <= this.positionCount; pendingSkipCount++) {
           const value = this.states.get(this.buildStateKey({
@@ -471,7 +498,7 @@ class PathMatcher {
    * Emits every transition out of one cell, for each way that cell can currently be reached.
    */
   private expand(tokenIndex: number, positionIndex: number): void {
-    for (const leafKind of [LeafKind.Unmatched, LeafKind.Alias, LeafKind.RealName]) {
+    for (const leafKind of [LeafKind.Unmatched, LeafKind.LinkText, LeafKind.Alias, LeafKind.RealName]) {
       for (const wasAncestorAliasUsed of [false, true]) {
         for (let pendingSkipCount = 0; pendingSkipCount <= positionIndex; pendingSkipCount++) {
           const value = this.states.get(this.buildStateKey({
@@ -551,7 +578,7 @@ class PathMatcher {
         };
 
         this.setState({
-          leafKind: isLeaf ? (isAliasLike ? LeafKind.Alias : LeafKind.RealName) : params.leafKind,
+          leafKind: isLeaf ? resolveLeafKind(label.source) : params.leafKind,
           pendingSkipCount: 0,
           positionIndex: params.positionIndex + 1,
           tokenIndex: lastTokenIndex + 1,
@@ -762,6 +789,25 @@ function matchSubsequence(segment: string, lowerCaseLabel: string): LabelMatch |
 }
 
 /**
+ * Turns the source of the label that satisfied the leaf into the leaf kind the tier is computed from.
+ *
+ * A title still reads as an alias here, which is the promise {@link checkIsAliasLike} keeps. A link text is
+ * the one source that gets a kind of its own, because it is the one that ranks differently. On an ANCESTOR it
+ * needs no such care: it counts as an alias there, since folder notes are reached by link texts rarely enough
+ * that a fifth dimension of DP state would buy nothing anyone could see.
+ *
+ * @param source - Where the leaf's label came from.
+ * @returns The leaf kind.
+ */
+function resolveLeafKind(source: LabelSource): LeafKind {
+  if (source.kind === LabelSourceKind.RealName) {
+    return LeafKind.RealName;
+  }
+
+  return source.kind === LabelSourceKind.LinkText ? LeafKind.LinkText : LeafKind.Alias;
+}
+
+/**
  * Turns the two facts the DP carries into the tier they describe.
  *
  * @param leafKind - How the leaf position matched.
@@ -774,6 +820,10 @@ function resolveTier(leafKind: LeafKind, wasAncestorAliasUsed: boolean): MatchTi
   // value outside the type to arrive here — an exhaustiveness guard would be a branch nothing can take.
   if (leafKind === LeafKind.Unmatched) {
     return MatchTier.AncestorOnly;
+  }
+
+  if (leafKind === LeafKind.LinkText) {
+    return MatchTier.LeafLinkText;
   }
 
   if (leafKind === LeafKind.Alias) {

@@ -219,6 +219,12 @@ interface SourceFlair {
 const ALIAS_FLAIR_ICON_ID = 'lucide-forward';
 
 /**
+ * The marker for a link text: Lucide's plain link glyph. The text that matched is already the row's title, so the
+ * marker only has to say that it was a link's text, and the tooltip says so in words.
+ */
+const LINK_TEXT_FLAIR_ICON_ID = 'lucide-link';
+
+/**
  * The marker Obsidian puts beside a `text`-typed property in its Properties UI, which is what a title is.
  * One glyph covers EVERY configured property: arbitrary property names cannot map to meaningful glyphs, so
  * the symbol answers alias-versus-property and the tooltip answers which property.
@@ -678,6 +684,10 @@ function buildSourceFlair(source: LabelSource): null | SourceFlair {
 
   if (source.kind === LabelSourceKind.Alias) {
     return { ariaLabel: 'Alias', iconId: ALIAS_FLAIR_ICON_ID };
+  }
+
+  if (source.kind === LabelSourceKind.LinkText) {
+    return { ariaLabel: 'Link text', iconId: LINK_TEXT_FLAIR_ICON_ID };
   }
 
   const propertySource: PropertyLabelSource = source;

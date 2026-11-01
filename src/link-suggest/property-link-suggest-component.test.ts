@@ -1,9 +1,11 @@
+import type { PluginSettingsComponentBase } from '@mnaoumov/obsidian-lib/components/plugin-settings-component';
 import type {
   App as AppOriginal,
   EditorSuggest
 } from 'obsidian';
 
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -13,6 +15,7 @@ import {
 } from 'vitest';
 
 import { LabelIndexComponent } from '../label-index/label-index-component.ts';
+import { PluginSettings } from '../settings/plugin-settings.ts';
 import { PropertyLinkSuggestComponent } from './property-link-suggest-component.ts';
 import { PropertyLinkSuggest } from './property-link-suggest.ts';
 
@@ -55,7 +58,7 @@ describe('PropertyLinkSuggestComponent', () => {
   });
 
   it('should refresh the label index when a suggester session starts', () => {
-    const labelIndexComponent = new LabelIndexComponent({ app });
+    const labelIndexComponent = createLabelIndexComponent();
     const refreshSpy = vi.spyOn(labelIndexComponent, 'refresh');
     new PropertyLinkSuggestComponent({ app, labelIndexComponent }).load();
     const suggest = castTo<PropertyLinkSuggest>(suggests[0]);
@@ -66,5 +69,12 @@ describe('PropertyLinkSuggestComponent', () => {
 });
 
 function createComponent(): PropertyLinkSuggestComponent {
-  return new PropertyLinkSuggestComponent({ app, labelIndexComponent: new LabelIndexComponent({ app }) });
+  return new PropertyLinkSuggestComponent({ app, labelIndexComponent: createLabelIndexComponent() });
+}
+
+function createLabelIndexComponent(): LabelIndexComponent {
+  return new LabelIndexComponent({
+    app,
+    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings: new PluginSettings() })
+  });
 }

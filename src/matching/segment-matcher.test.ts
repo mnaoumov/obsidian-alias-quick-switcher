@@ -15,6 +15,7 @@ import {
   checkIsAliasLike,
   LabelMatchQuality,
   LabelSourceKind,
+  LINK_TEXT_LABEL_SOURCE,
   matchPath,
   MatchTier,
   REAL_NAME_LABEL_SOURCE,
@@ -42,6 +43,7 @@ describe('checkIsAliasLike', () => {
   it.each([
     [REAL_NAME_LABEL_SOURCE, false],
     [ALIAS_LABEL_SOURCE, true],
+    [LINK_TEXT_LABEL_SOURCE, true],
     [{ kind: LabelSourceKind.Property, propertyName: 'title' } as const, true]
   ])('should answer %o with %s', (source, expected) => {
     expect(checkIsAliasLike(source)).toBe(expected);
@@ -122,6 +124,45 @@ describe('matchPath', () => {
         { kind: LabelSourceKind.Property, propertyName: 'title' },
         { kind: LabelSourceKind.Property, propertyName: 'title' }
       ]);
+    });
+  });
+
+  /*
+   * A link text is the one source that ranks on its own: it is what some other note called the file, not a name
+   * the file was given, so a leaf reached only by one sits below every leaf reached by an alias or a title.
+   */
+  describe('a label read from a link text', () => {
+    const LINK_TEXT_POSITIONS = [
+      buildLinkTextPosition('Bravo', 'Delta'),
+      buildLinkTextPosition('Charlie', 'Echo')
+    ];
+
+    it.each([
+      ['Echo', MatchTier.LeafLinkText],
+      ['Bravo/Echo', MatchTier.LeafLinkText],
+      ['Delta/Echo', MatchTier.LeafLinkText],
+      ['Delta/Charlie', MatchTier.AncestorAlias],
+      ['Bravo/Charlie', MatchTier.RealNamesOnly]
+    ])('should tier %s as %i', (query, tier) => {
+      expect(matchPath({ mode: SegmentMatchMode.Substring, positions: LINK_TEXT_POSITIONS, tokens: tokenizeQuery(query) })?.tier).toBe(tier);
+    });
+
+    it('should prefer an alias over a link text when both would satisfy the leaf', () => {
+      const positions = [{
+        labels: [
+          { source: REAL_NAME_LABEL_SOURCE, text: 'Charlie' },
+          { source: LINK_TEXT_LABEL_SOURCE, text: 'Echo' },
+          { source: ALIAS_LABEL_SOURCE, text: 'Echo the alias' }
+        ]
+      }];
+      const match = matchPath({ mode: SegmentMatchMode.Substring, positions, tokens: tokenizeQuery('Echo') });
+      expect(match?.tier).toBe(MatchTier.LeafAlias);
+      expect(match?.positions[0]?.source).toBe(ALIAS_LABEL_SOURCE);
+    });
+
+    it('should carry the link-text source through to the position it satisfied', () => {
+      const match = matchPath({ mode: SegmentMatchMode.Substring, positions: LINK_TEXT_POSITIONS, tokens: tokenizeQuery('Echo') });
+      expect(match?.positions.map((position) => position?.source ?? null)).toStrictEqual([null, LINK_TEXT_LABEL_SOURCE]);
     });
   });
 
@@ -228,7 +269,8 @@ describe('matchPath', () => {
     it('should rank a leaf alias below an ancestor alias with a real-name leaf', () => {
       expect(MatchTier.RealNamesOnly).toBeLessThan(MatchTier.AncestorAlias);
       expect(MatchTier.AncestorAlias).toBeLessThan(MatchTier.LeafAlias);
-      expect(MatchTier.LeafAlias).toBeLessThan(MatchTier.AncestorOnly);
+      expect(MatchTier.LeafAlias).toBeLessThan(MatchTier.LeafLinkText);
+      expect(MatchTier.LeafLinkText).toBeLessThan(MatchTier.AncestorOnly);
     });
 
     it('should stay in the real-names tier when an alias was available but unused', () => {
@@ -300,6 +342,15 @@ describe('matchPath', () => {
     });
   });
 });
+
+function buildLinkTextPosition(name: string, text: string): PathPosition {
+  return {
+    labels: [
+      { source: REAL_NAME_LABEL_SOURCE, text: name },
+      { source: LINK_TEXT_LABEL_SOURCE, text }
+    ]
+  };
+}
 
 function buildPosition(name: string, ...aliases: string[]): PathPosition {
   return {

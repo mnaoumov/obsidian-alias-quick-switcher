@@ -52,4 +52,12 @@ export class PluginSettings {
    * Whether non-markdown files are offered too, the way Obsidian's own switcher does when asked.
    */
   public shouldIncludeNonMarkdownFiles = false;
+
+  /**
+   * Whether a file is also found by the display texts that links pointing at it were written with — `alpha` for
+   * `[alpha](bravo.md)` — as `Advanced Metadata Cache`'s `Link texts` module reports them.
+   *
+   * On by default: it only adds results, every one ranked below the names the note was given.
+   */
+  public shouldMatchLinkTexts = true;
 }

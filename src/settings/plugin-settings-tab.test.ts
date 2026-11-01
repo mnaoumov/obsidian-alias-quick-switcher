@@ -39,7 +39,8 @@ const EXPECTED_BOUND_KEYS: (keyof PluginSettings)[] = [
   'recentFilesBoostCount',
   'segmentMatchMode',
   'shouldIncludeFolders',
-  'shouldIncludeNonMarkdownFiles'
+  'shouldIncludeNonMarkdownFiles',
+  'shouldMatchLinkTexts'
 ];
 
 describe('PluginSettingsTab', () => {

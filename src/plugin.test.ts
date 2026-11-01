@@ -24,6 +24,7 @@ import type { MigratableSettings } from './advanced-metadata-cache.ts';
 import type { PluginSettings } from './settings/plugin-settings.ts';
 
 import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
+import { AddAliasCommandHandler } from './aliases/add-alias-command-handler.ts';
 import { LabelIndexComponent } from './label-index/label-index-component.ts';
 import { PropertyLinkSuggestComponent } from './link-suggest/property-link-suggest-component.ts';
 import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
@@ -225,7 +226,7 @@ describe('Plugin', () => {
     expect(PropertyLinkSuggestComponent).toHaveBeenCalledOnce();
   });
 
-  it('should register the report bug and open demo vault command handlers', async () => {
+  it('should register the add alias, report bug and open demo vault command handlers', async () => {
     const plugin = new Plugin(app.asOriginalType__(), manifest);
     await plugin.onload();
 
@@ -233,7 +234,11 @@ describe('Plugin', () => {
     // its own batch through the same spy - so build every batch and look across them.
     const commandHandlers = registerCommandHandlers.mock.calls
       .flatMap(([commandHandlerFactory]) => castTo<() => unknown[]>(commandHandlerFactory)());
-    expect(commandHandlers).toEqual(expect.arrayContaining([expect.any(OpenBugReportCommandHandler), expect.any(OpenDemoVaultCommandHandler)]));
+    expect(commandHandlers).toEqual(expect.arrayContaining([
+      expect.any(AddAliasCommandHandler),
+      expect.any(OpenBugReportCommandHandler),
+      expect.any(OpenDemoVaultCommandHandler)
+    ]));
   });
 
   describe('Advanced Metadata Cache dependency', () => {

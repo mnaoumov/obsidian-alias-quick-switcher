@@ -17,6 +17,7 @@ import {
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_PLUGIN_NAME
 } from './advanced-metadata-cache.ts';
+import { AddAliasCommandHandler } from './aliases/add-alias-command-handler.ts';
 import { LabelIndexComponent } from './label-index/label-index-component.ts';
 import { PropertyLinkSuggestComponent } from './link-suggest/property-link-suggest-component.ts';
 import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
@@ -109,6 +110,10 @@ export class Plugin extends PluginBase {
     );
 
     await this.commandHandlerComponent.registerCommandHandlers(() => [
+      new AddAliasCommandHandler({
+        app: this.app,
+        resourceLockComponent: this.resourceLockComponent
+      }),
       new OpenBugReportCommandHandler({
         app: this.app,
         gitHubRepo: 'mnaoumov/obsidian-alias-quick-switcher',

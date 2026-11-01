@@ -12,8 +12,9 @@
  *   plugin's own belongs on an Obsidian function, and each has a replacement on the published API below.
  * - **A published API.** {@link AdvancedMetadataCacheApi} is published through the plugin registry
  *   under the plugin id `advanced-metadata-cache` and carries a contract version of its own. It
- *   answers what the `Titles` and `Headings` modules know, which core has no method for, and since
- *   contract `1.3.0` every extra the `Backlinks` and `Names` modules offer beyond the core call.
+ *   answers what the `Titles`, `Headings`, `Properties`, `Unlinked mentions`, `Link texts` and `Code block links` modules know, which core has no
+ *   method for, and
+ *   since contract `1.3.0` every extra the `Backlinks` and `Names` modules offer beyond the core call.
  *
  * Hand-written and self-contained on purpose: it imports from `obsidian` and nothing else, so a
  * plugin that has never heard of `@mnaoumov/obsidian-lib` can copy this file, or reference it, and depend
@@ -31,6 +32,7 @@
 
 import type {
   Reference,
+  ReferenceCache,
   TFile
 } from 'obsidian';
 
@@ -78,6 +80,118 @@ export interface AdvancedMetadataCacheApi {
   getBacklinksForFileSafe(pathOrFile: string | TFile): Promise<CustomArrayDict<Reference> | null>;
 
   /**
+   * Lists the links and embeds the `Code block links` module found inside a note's code blocks.
+   *
+   * The same references are already in the note's `app.metadataCache.getFileCache()` entry, among its
+   * `links` and `embeds`, which is what puts them into backlinks, the graph and rename updates; this tells a
+   * consumer which of those came from a code block, and of which language, without anything of this plugin's
+   * own being written onto Obsidian's objects. A reference is listed while its block's language is listed in the
+   * `Code block languages` setting or registered through
+   * {@link AdvancedMetadataCacheApi.registerCodeBlockLanguage}.
+   *
+   * Answers as things stand: at startup, before the module has read the notes, it may answer with too little;
+   * use {@link AdvancedMetadataCacheApi.getCodeBlockReferencesSafe} when that matters.
+   *
+   * Added in contract `1.10.0`.
+   *
+   * @param pathOrFile - The vault-relative path of a note, or the note itself.
+   * @returns The references, in the order they appear in the note; empty for a note with none and for a path
+   *   no note answers to. `null` while the `Code block links` module is off.
+   */
+  getCodeBlockReferences(pathOrFile: string | TFile): CodeBlockReference[] | null;
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getCodeBlockReferences}, once the module has read every note at startup.
+   *
+   * Added in contract `1.10.0`.
+   *
+   * @param pathOrFile - The vault-relative path of a note, or the note itself.
+   * @returns The references; `null` while the `Code block links` module is off.
+   */
+  getCodeBlockReferencesSafe(pathOrFile: string | TFile): Promise<CodeBlockReference[] | null>;
+
+  /**
+   * Lists the date-shaped values of the indexed frontmatter properties that fall in a range, in order —
+   * answered from the `Properties` module's ordered index, without walking the vault.
+   *
+   * A value counts as a date when it is shaped `YYYY-MM-DD`, optionally followed by `THH:mm`, `THH:mm:ss` or
+   * `THH:mm:ss.sss`: what Obsidian's own `date` and `datetime` properties write. A value with a time may also
+   * carry an ISO 8601 offset (`Z`, `-06:00`, `+0200`) and an RFC 9557 time zone annotation (`[Europe/Kyiv]`).
+   * By default, values are ordered and matched by their LOCAL part, the date and time as written with the zone dropped,
+   * so `2026-10-26T23:00-06:00` is on the 26th and the bounds never carry a zone. A list contributes each such
+   * member.
+   * Since contract `1.8.0`, `timeBasis: 'utc'` instead matches and orders by instant, with complete
+   * offset-bearing bounds and a per-query {@link DatedValuesQuery.missingTimeZone} policy.
+   *
+   * In a date property, a value of reduced precision counts too: a year (`2019`, also as an unquoted YAML
+   * number) or a year and a month (`2019-05`), as ISO 8601 writes a date known only that far. It stands for
+   * its whole period, never for the period's first day: it sorts at the START of its period (`2019` before
+   * `2019-01-01`), a range matches it whenever the two OVERLAP (`{ from: '2019-05-10', to: '2019-05-20' }`
+   * lists `2019` and `2019-05`), and it is reported as written, so its precision is the length of its
+   * `value`. A recurring query skips a year alone and matches a month by the same overlap.
+   *
+   * Every property whose type is `date` or `datetime`, or whose name matches the plugin's `Date properties`
+   * setting (by default `date` and `*Date`), is indexed without being registered, in each casing a note
+   * spells it; a property registered through {@link AdvancedMetadataCacheApi.registerPropertyName}
+   * contributes its date-shaped values too. A value that is not date-shaped is left out, never guessed:
+   * {@link AdvancedMetadataCacheApi.getNonDateValues} lists those of the date properties.
+   *
+   * With {@link DatedValuesQuery.isRecurring} on, the year is ignored, so a birthday is found in every year:
+   * `{ from: '10-26', to: '11-25', isRecurring: true }` lists the next month's birthdays, and a `from`
+   * after `to` wraps the end of the year.
+   *
+   * Answers from the index as it stands, as {@link AdvancedMetadataCacheApi.getPathsByPropertyValue} does;
+   * use {@link AdvancedMetadataCacheApi.getDatedValuesSafe} when that matters.
+   *
+   * Added in contract `1.5.0`.
+   *
+   * @param query - The range, and the properties to read; an empty query lists every dated value.
+   * @returns The values, ordered by the chosen time basis (by month and day first, then by year, when recurring), then by
+   *   property name, then by path. `null` when `propertyNames` names a property nobody registered and no
+   *   note carries as a date, and while the `Properties` module is off.
+   */
+  getDatedValues(query: DatedValuesQuery): DatedValue[] | null;
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getDatedValues}, waiting first for the index to be rebuilt from the
+   * metadata cache.
+   *
+   * Added in contract `1.5.0`.
+   *
+   * @param query - The range, and the properties to read.
+   * @returns The values, in order; `null` as for {@link AdvancedMetadataCacheApi.getDatedValues}.
+   */
+  getDatedValuesSafe(query: DatedValuesQuery): Promise<DatedValue[] | null>;
+
+  /**
+   * Lists the values of the date properties that are NOT date-shaped, and so are left out of
+   * {@link AdvancedMetadataCacheApi.getDatedValues}: a time alone (`14:30`), a free-text date, a typo. A year
+   * or a month of reduced precision (`2019`, `2019-05`) is a date, so it is not listed. A date
+   * property is one {@link AdvancedMetadataCacheApi.getDatedValues} indexes without a registration, by its
+   * type or by its name; a registered property of another type is not one, so its other values are not
+   * listed.
+   *
+   * Answers from the index as it stands; use {@link AdvancedMetadataCacheApi.getNonDateValuesSafe} when that
+   * matters.
+   *
+   * Added in contract `1.6.0`.
+   *
+   * @returns The values, ordered by path, then by property name, then by value; `null` while the
+   *   `Properties` module is off.
+   */
+  getNonDateValues(): DatedValue[] | null;
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getNonDateValues}, waiting first for the index to be rebuilt from the
+   * metadata cache.
+   *
+   * Added in contract `1.6.0`.
+   *
+   * @returns The values; `null` while the `Properties` module is off.
+   */
+  getNonDateValuesSafe(): Promise<DatedValue[] | null>;
+
+  /**
    * Reads when each of a note's headings was created, last modified and last seen.
    *
    * Obsidian keeps no per-heading metadata, so the `Headings` module keeps it: it compares each parse of
@@ -98,6 +212,41 @@ export interface AdvancedMetadataCacheApi {
    *   no headings, and while the `Headings` module is off.
    */
   getHeadingTimes(pathOrFile: string | TFile): HeadingTimes[];
+
+  /**
+   * Reads the display texts that links pointing at a file use instead of its name: `alpha` for
+   * `[alpha](bravo.md)` or `[[bravo|alpha]]`, `boarding pass` for `![[IMG_2231.jpg|boarding pass]]`. A label source
+   * beside a note's `aliases` and titles, and for an attachment the only name it has besides its file name.
+   *
+   * A link counts when its display text was WRITTEN, in the body or in a frontmatter value, embeds included, and
+   * resolves to the file. `[[bravo]]` writes none, and a written text that is only the file's own name again
+   * (`[bravo](bravo.md)`, `[[Notes/bravo|Notes/bravo]]`) is left out, compared case-insensitively with runs of
+   * whitespace collapsed. An embed's size (`|300`, `|300x200`) is not part of its text. Texts are distinct as
+   * written, after trimming; an alias the file already declares is NOT left out, so a caller merging this with
+   * `aliases` drops its own repeats.
+   *
+   * Answered from the `Link texts` module's index, built from the links Obsidian has already parsed and kept
+   * current by its link resolution; it is empty until built at startup, so use
+   * {@link AdvancedMetadataCacheApi.getLinkTextsSafe} when you may be asked early, and
+   * {@link AdvancedMetadataCacheApi.onLinkTextsChanged} to learn when an answer changed.
+   *
+   * Added in contract `1.9.0`.
+   *
+   * @param pathOrFile - The vault-relative path of any file, or the file itself.
+   * @returns The distinct texts, the most used first, then in code-unit order; empty for a file no link names
+   *   differently. `null` while the `Link texts` module is off.
+   */
+  getLinkTexts(pathOrFile: string | TFile): LinkText[] | null;
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getLinkTexts}, waiting for the index to be built first.
+   *
+   * Added in contract `1.9.0`.
+   *
+   * @param pathOrFile - The vault-relative path of any file, or the file itself.
+   * @returns The distinct texts; `null` while the `Link texts` module is off.
+   */
+  getLinkTextsSafe(pathOrFile: string | TFile): Promise<LinkText[] | null>;
 
   /**
    * Every link target the `[[` autocomplete can offer, answered from the `Names` module's index — the
@@ -161,6 +310,67 @@ export interface AdvancedMetadataCacheApi {
   getPathsByNameSafe(name: string): Promise<null | string[]>;
 
   /**
+   * Finds every note whose frontmatter property holds a value: the property itself, when it is a scalar,
+   * or one of its members, when it is a list.
+   *
+   * Only a property registered through {@link AdvancedMetadataCacheApi.registerPropertyName} is indexed.
+   * Matched exactly, name and value alike; a number or a boolean is matched by its string form, so `7`
+   * finds `key: 7`. `null` and objects are never matched.
+   *
+   * Answers from the index as it stands. At startup that is the index saved by the previous session, which
+   * answers at once but does not yet know what changed while Obsidian was closed; use
+   * {@link AdvancedMetadataCacheApi.getPathsByPropertyValueSafe} when that matters.
+   *
+   * Added in contract `1.4.0`.
+   *
+   * @param propertyName - The property name.
+   * @param value - The value to look for.
+   * @returns The vault-relative paths of the notes holding it, unordered; `null` for a property nobody
+   *   registered and while the `Properties` module is off — walk the vault then.
+   */
+  getPathsByPropertyValue(propertyName: string, value: string): null | string[];
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getPathsByPropertyValue}, waiting first for the index to be rebuilt
+   * from the metadata cache.
+   *
+   * Added in contract `1.4.0`.
+   *
+   * @param propertyName - The property name.
+   * @param value - The value to look for.
+   * @returns The vault-relative paths; `null` for a property nobody registered and while the `Properties`
+   *   module is off.
+   */
+  getPathsByPropertyValueSafe(propertyName: string, value: string): Promise<null | string[]>;
+
+  /**
+   * Finds every note carrying a frontmatter property at all, whatever its value — `null` and an empty list
+   * included.
+   *
+   * Answers from the index as it stands, as {@link AdvancedMetadataCacheApi.getPathsByPropertyValue} does.
+   *
+   * Added in contract `1.4.0`.
+   *
+   * @param propertyName - The property name, registered through
+   *   {@link AdvancedMetadataCacheApi.registerPropertyName}.
+   * @returns The vault-relative paths, unordered; `null` for a property nobody registered and while the
+   *   `Properties` module is off.
+   */
+  getPathsWithProperty(propertyName: string): null | string[];
+
+  /**
+   * {@link AdvancedMetadataCacheApi.getPathsWithProperty}, waiting first for the index to be rebuilt from
+   * the metadata cache.
+   *
+   * Added in contract `1.4.0`.
+   *
+   * @param propertyName - The property name.
+   * @returns The vault-relative paths; `null` for a property nobody registered and while the `Properties`
+   *   module is off.
+   */
+  getPathsWithPropertySafe(propertyName: string): Promise<null | string[]>;
+
+  /**
    * The frontmatter properties whose values currently count as a note's title.
    *
    * There to be READ rather than re-typed: the point of the setting living in this plugin is that a
@@ -177,7 +387,8 @@ export interface AdvancedMetadataCacheApi {
 
   /**
    * Reads one note's titles — the values of the properties {@link
-   * AdvancedMetadataCacheApi.getTitlePropertyNames} names.
+   * AdvancedMetadataCacheApi.getTitlePropertyNames} names, then the names the user's name patterns build
+   * from the note's name parts (such as `lastName` and `firstName`), once per language those parts list.
    *
    * Lazily memoized per file and kept current by the vault's own events, so asking repeatedly costs a
    * map lookup. Synchronous, and safe to call from a suggester's per-keystroke path, which is what it
@@ -185,10 +396,32 @@ export interface AdvancedMetadataCacheApi {
    *
    * @param pathOrFile - The vault-relative path of a note, or the note itself.
    * @returns Its titles, exactly as they were typed, in the order the configured properties were
-   *   typed, with repeats dropped case-insensitively. Empty for a note carrying none, for a path no
+   *   typed, then the built names in the order the patterns were typed, with repeats dropped
+   *   case-insensitively. Empty for a note carrying none, for a path no
    *   file answers to, and while the `Titles` module is off.
    */
   getTitles(pathOrFile: string | TFile): string[];
+
+  /**
+   * Finds every note that mentions a note without linking to it: what the Backlinks pane's `Unlinked mentions`
+   * section lists, note for note and match for match.
+   *
+   * A note is mentioned by its basename or one of its `aliases`, matched case-insensitively (no diacritic folding),
+   * as a whole word where the name starts or ends with a letter or a digit. A match is not counted when it lies inside
+   * a link, an embed or the frontmatter; one inside code is counted, as Obsidian counts it. The note itself and the
+   * notes excluded from the vault's search are never listed.
+   *
+   * Answered from the `Unlinked mentions` module's index, which reads only the notes whose text holds one of the
+   * names. Waits for the index to be built first, at startup. Always asynchronous, because the candidate notes are
+   * read to confirm each match.
+   *
+   * Added in contract `1.7.0`.
+   *
+   * @param pathOrFile - The vault-relative path of a note, or the note itself.
+   * @returns The mentioning notes, ordered by path; empty for a path no file answers to. `null` while the
+   *   `Unlinked mentions` module is off.
+   */
+  getUnlinkedMentions(pathOrFile: string | TFile): Promise<null | UnlinkedMention[]>;
 
   /**
    * Offers the user title properties another plugin used to own, and adds the ones they approve to
@@ -209,6 +442,61 @@ export interface AdvancedMetadataCacheApi {
    * @returns Whether the user applied it. On `false` nothing was written, and the offer should come back.
    */
   migrateSettings(params: MigrateSettingsParams): Promise<MigrateSettingsResult>;
+
+  /**
+   * Subscribes to changes of {@link AdvancedMetadataCacheApi.getLinkTexts}'s answers.
+   *
+   * The callback is called synchronously after each change, with the paths of the files whose link texts changed,
+   * or with `null` when any of them may have: when the index has just been built, and when it is cleared because the
+   * `Link texts` module was switched off or on. The subscription lasts until the returned function is called,
+   * whatever happens to the module meanwhile, so a caller subscribes once on load and unsubscribes on unload.
+   *
+   * Added in contract `1.9.0`.
+   *
+   * @param callback - Called with the changed paths, or `null` for any of them.
+   * @returns A function that ends the subscription.
+   */
+  onLinkTextsChanged(callback: LinkTextsChangedCallback): () => void;
+
+  /**
+   * Asks the `Code block links` module to treat the content of code blocks of a language as markdown, so the
+   * links and embeds written there count like any other: in backlinks, outgoing links, the graph and rename
+   * updates. For a plugin that renders a code block language as a note, such as an admonition or a tabs block.
+   *
+   * Call it on load, and call the returned function on unload: the registration is kept in memory only, so it
+   * goes away with the plugin. Two plugins may register the same language; it stays until both have
+   * unregistered it. A pattern in which `*` stands for anything (`ad-*`) is accepted, matched over the whole
+   * language and case-sensitively, as in the `Code block languages` setting.
+   *
+   * Registering while the module is off is kept, and applied once the module is switched on.
+   *
+   * Added in contract `1.10.0`.
+   *
+   * @param language - The language as written after the opening fence, or a pattern.
+   * @returns A function that unregisters it; calling it again does nothing.
+   */
+  registerCodeBlockLanguage(language: string): () => void;
+
+  /**
+   * Asks the `Properties` module to index a frontmatter property, so
+   * {@link AdvancedMetadataCacheApi.getPathsByPropertyValue} and
+   * {@link AdvancedMetadataCacheApi.getPathsWithProperty} can answer about it.
+   *
+   * Call it once on load; a name already registered is left as it is. The registration is DURABLE: it is
+   * saved with the index, so at the next startup the property is answered from disk before the
+   * registering plugin has even loaded. There is no unregister — a property nobody asks about any more
+   * costs a map entry per note that carries it.
+   *
+   * Registering while the `Properties` module is off is kept, and indexed once the module is switched on.
+   *
+   * A property whose type is `date` or `datetime` needs no registration: it is registered automatically,
+   * for {@link AdvancedMetadataCacheApi.getDatedValues}, and so answers the other lookups as well.
+   *
+   * Added in contract `1.4.0`.
+   *
+   * @param propertyName - The property name, matched exactly.
+   */
+  registerPropertyName(propertyName: string): void;
 }
 
 /**
@@ -223,6 +511,27 @@ export interface AdvancedMetadataCacheMigratableSettings {
    * Frontmatter properties to add to the title properties, e.g. `['subtitle']`.
    */
   readonly titlePropertyNames?: readonly string[];
+}
+
+/**
+ * A link or embed written inside a code block, as {@link AdvancedMetadataCacheApi.getCodeBlockReferences} lists it.
+ */
+export interface CodeBlockReference {
+  /**
+   * Whether it is an embed (`![[...]]`), listed among the entry's `embeds`, rather than a link, listed among its
+   * `links`.
+   */
+  readonly isEmbed: boolean;
+
+  /**
+   * The language of the innermost listed code block holding it.
+   */
+  readonly language: string;
+
+  /**
+   * The reference as it stands in the note's cache entry, its position in the note.
+   */
+  readonly reference: ReferenceCache;
 }
 
 /**
@@ -300,6 +609,87 @@ export interface CustomArrayDict<T> {
 }
 
 /**
+ * One value of one indexed frontmatter property, as {@link AdvancedMetadataCacheApi.getDatedValues} reports
+ * its date-shaped values and {@link AdvancedMetadataCacheApi.getNonDateValues} the rest. A note whose
+ * property lists several values gives one of these per value.
+ */
+export interface DatedValue {
+  /**
+   * The vault-relative path of the note.
+   */
+  readonly path: string;
+
+  /**
+   * The property name, as the note spells it for a date-typed property, and as it was registered otherwise.
+   */
+  readonly propertyName: string;
+
+  /**
+   * The value, exactly as the frontmatter holds it, e.g. `2026-10-26`, `2026-10-26T09:30` or
+   * `2026-10-26T09:30:00+02:00[Europe/Kyiv]`, zone included; a reduced-precision date stays `2019` or
+   * `2019-05`, never padded to a day. A number or a boolean is in its string form.
+   */
+  readonly value: string;
+}
+
+/**
+ * An explicit time zone for a UTC query's zone-free calendar values.
+ */
+export interface SpecificTimeZone {
+  /** An IANA time zone, for example `Europe/Kyiv`. */
+  readonly zone: string;
+}
+
+/**
+ * A range for {@link AdvancedMetadataCacheApi.getDatedValues}. Wall-clock bounds are inclusive prefixes
+ * of the local date and time. UTC bounds are inclusive complete date and time values with an offset.
+ */
+export interface DatedValuesQuery {
+  /**
+   * The ordering and bounds to use. UTC bounds are complete ISO date and time values with an offset, inclusive,
+   * and cannot be combined with `isRecurring`. Wall-clock queries retain prefix bounds.
+   * @defaultValue `'wallClock'`
+   */
+  readonly timeBasis?: 'utc' | 'wallClock';
+
+  /**
+   * How UTC queries interpret values without a zone. `default` uses the Default time zone setting
+   * (the device zone when empty); `utc` uses UTC; `{ zone: 'Europe/Kyiv' }` uses that zone; `skip`
+   * omits them; `fail` throws for a zoneless value overlapping the range in the default zone.
+   * Date-only, month and year values cover their whole period. DST gaps move forward and overlaps
+   * choose the earlier instant, as Temporal's compatible disambiguation does. Explicit offsets
+   * take precedence over zone annotations. Invalid zones and UTC bounds throw a `RangeError`.
+   * @defaultValue `'default'`
+   */
+  readonly missingTimeZone?: 'default' | 'fail' | 'skip' | 'utc' | SpecificTimeZone;
+
+  /**
+   * The earliest value to include; no lower bound when left out. A date, a datetime or a prefix of one
+   * (`2026`, `2026-10`, `2026-10-26T09`); with {@link DatedValuesQuery.isRecurring} on, a month and day
+   * (`10-26`) or a month (`10`).
+   */
+  readonly from?: string;
+
+  /**
+   * Whether to match and order by month and day alone, ignoring the year, as for a birthday or an
+   * anniversary. A `from` after `to` then wraps the end of the year: `{ from: '12-15', to: '01-15' }`.
+   */
+  readonly isRecurring?: boolean;
+
+  /**
+   * The properties to read, matched exactly; every indexed property when left out.
+   */
+  readonly propertyNames?: readonly string[];
+
+  /**
+   * The latest value to include; no upper bound when left out. Compared over its own length, so `2026-10-31`
+   * includes `2026-10-31T23:59` and `2026-10` includes the whole of October. The same forms as
+   * {@link DatedValuesQuery.from}.
+   */
+  readonly to?: string;
+}
+
+/**
  * One heading's times, as {@link AdvancedMetadataCacheApi.getHeadingTimes} reports them. Every time is a
  * Unix epoch in milliseconds.
  */
@@ -341,6 +731,33 @@ export interface HeadingTimes {
 }
 
 /**
+ * One distinct display text of a file, as {@link AdvancedMetadataCacheApi.getLinkTexts} reports it.
+ */
+export interface LinkText {
+  /**
+   * How many links use it, across every note.
+   */
+  readonly count: number;
+
+  /**
+   * The vault-relative paths of the notes whose links use it, in code-unit order.
+   */
+  readonly sourcePaths: readonly string[];
+
+  /**
+   * The display text, as written and trimmed.
+   */
+  readonly text: string;
+}
+
+/**
+ * The callback of {@link AdvancedMetadataCacheApi.onLinkTextsChanged}.
+ *
+ * @param targetPaths - The paths of the files whose link texts changed, or `null` when any of them may have.
+ */
+export type LinkTextsChangedCallback = (targetPaths: null | readonly string[]) => void;
+
+/**
  * Parameters for {@link AdvancedMetadataCacheApi.migrateSettings}.
  */
 export interface MigrateSettingsParams {
@@ -364,6 +781,38 @@ export interface MigrateSettingsResult {
    * proposing plugin must NOT record the migration as done.
    */
   readonly isApplied: boolean;
+}
+
+/**
+ * One note that mentions another without linking to it, as
+ * {@link AdvancedMetadataCacheApi.getUnlinkedMentions} reports it.
+ */
+export interface UnlinkedMention {
+  /**
+   * The vault-relative path of the mentioning note.
+   */
+  readonly path: string;
+
+  /**
+   * Where its text mentions the note, ordered by position. Two names of the note may match overlapping text, and
+   * then both spans are listed.
+   */
+  readonly ranges: readonly UnlinkedMentionRange[];
+}
+
+/**
+ * A span of a note's text, in UTF-16 offsets from the start of the file, frontmatter included.
+ */
+export interface UnlinkedMentionRange {
+  /**
+   * The offset just past the span's last character.
+   */
+  readonly end: number;
+
+  /**
+   * The offset of the span's first character.
+   */
+  readonly start: number;
 }
 
 /**

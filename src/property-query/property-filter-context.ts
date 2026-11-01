@@ -8,6 +8,8 @@ import { getLinkpath } from 'obsidian';
 import type { LabelIndex } from '../label-index/label-index.ts';
 import type { PropertyFilterContext } from './property-filter.ts';
 
+import { LabelSourceKind } from '../matching/segment-matcher.ts';
+
 /**
  * Builds the vault-backed {@link PropertyFilterContext}.
  *
@@ -34,7 +36,9 @@ export function createPropertyFilterContext(app: App, labelIndex: LabelIndex): P
         const target = app.metadataCache.getFirstLinkpathDest(getLinkpath(frontmatterLink.link), file.path);
 
         if (target) {
-          names.push(...labelIndex.getFileLabels(target).map((label) => label.text));
+          // Link texts are left out: they are what OTHER notes call the target, not a name it was given, and a
+          // property term finding a note by a word some third note once linked it with would be a surprise.
+          names.push(...labelIndex.getFileLabels(target).filter((label) => label.source.kind !== LabelSourceKind.LinkText).map((label) => label.text));
         }
       }
 

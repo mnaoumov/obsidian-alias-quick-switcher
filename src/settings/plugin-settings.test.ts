@@ -21,6 +21,7 @@ describe('PluginSettings', () => {
   it('should match only markdown files by default', () => {
     const settings = new PluginSettings();
     expect(settings.shouldIncludeNonMarkdownFiles).toBe(false);
+    expect(settings.shouldMatchLinkTexts).toBe(true);
   });
 
   it('should have nothing waiting to be handed over on a fresh install', () => {

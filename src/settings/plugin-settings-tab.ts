@@ -138,6 +138,25 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             this.bind({ propertyName: 'shouldIncludeNonMarkdownFiles', valueComponent: toggle });
           });
         }
+      }),
+      this.settingEx({
+        desc: createFragment((f) => {
+          f.appendText('Also find a file by the text that links to it are written with: ');
+          appendCodeBlock(f, '[alpha](bravo.md)');
+          f.appendText(' finds ');
+          appendCodeBlock(f, 'bravo');
+          f.appendText(' by ');
+          appendCodeBlock(f, 'alpha');
+          f.appendText(', and an embedded image is found by its caption. These rank below aliases and titles, and are marked with a link icon. The texts come from the Link texts module of ');
+          appendCodeBlock(f, 'Advanced Metadata Cache');
+          f.appendText('.');
+        }),
+        name: 'Match link texts',
+        render: (setting) => {
+          setting.addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldMatchLinkTexts', valueComponent: toggle });
+          });
+        }
       })
     ];
   }

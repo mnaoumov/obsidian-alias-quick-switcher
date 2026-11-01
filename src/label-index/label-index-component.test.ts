@@ -1,3 +1,4 @@
+import type { PluginSettingsComponentBase } from '@mnaoumov/obsidian-lib/components/plugin-settings-component';
 import type {
   App as AppOriginal,
   Plugin as PluginOriginal,
@@ -7,6 +8,7 @@ import type {
 import { publishPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { Component } from 'obsidian';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -16,12 +18,18 @@ import {
   it
 } from 'vitest';
 
-import type { AdvancedMetadataCacheTitlesApi } from '../advanced-metadata-cache.ts';
+import type { LinkText } from '../advanced-metadata-cache-api/api.d.ts';
+import type {
+  AdvancedMetadataCacheLinkTextsApi,
+  AdvancedMetadataCacheTitlesApi
+} from '../advanced-metadata-cache.ts';
 
 import {
+  ADVANCED_METADATA_CACHE_LINK_TEXTS_API_CONTRACT,
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT
 } from '../advanced-metadata-cache.ts';
+import { PluginSettings } from '../settings/plugin-settings.ts';
 import { LabelIndexComponent } from './label-index-component.ts';
 
 const VAULT_FILES: Record<string, string> = {
@@ -38,7 +46,14 @@ const VAULT_FILES: Record<string, string> = {
 let app: AppOriginal;
 let appMock: App;
 let component: LabelIndexComponent;
+
+/**
+ * What `Advanced Metadata Cache`'s Link texts module currently answers, by target path, and who listens to it.
+ */
+let linkTextsByPath: Map<string, string[]>;
+let linkTextsListeners: ((targetPaths: null | readonly string[]) => void)[];
 let providerComponent: Component;
+let settings: PluginSettings;
 
 /**
  * What `Advanced Metadata Cache`'s Titles module currently answers. A plain array the tests reassign, standing in
@@ -50,7 +65,13 @@ beforeEach(() => {
   appMock = App.createConfigured__({ files: VAULT_FILES });
   app = appMock.asOriginalType__();
   titlePropertyNames = [];
-  component = new LabelIndexComponent({ app });
+  settings = new PluginSettings();
+  linkTextsByPath = new Map();
+  linkTextsListeners = [];
+  component = new LabelIndexComponent({
+    app,
+    pluginSettingsComponent: strictProxy<PluginSettingsComponentBase<PluginSettings>>({ settings })
+  });
   component.load();
 });
 
@@ -145,7 +166,94 @@ describe('LabelIndexComponent', () => {
       expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Lima']);
     });
   });
+
+  describe('link texts', () => {
+    it('should name a file by the texts links to it are written with, after its aliases, without repeats', () => {
+      // `Echo` is already an alias, and the provider does not subtract aliases, so the index drops the repeat.
+      linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Mike', 'Echo']);
+      publishLinkTextsApi();
+      component.refresh();
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+      expect(component.labelIndex.getFileLabels(ensureNonNullable(fileAt('Alpha/Bravo/Charlie.md'))).map((label) => label.source.kind)).toStrictEqual(['RealName', 'Alias', 'LinkText']);
+    });
+
+    it('should name a folder by the link texts of its folder note', () => {
+      linkTextsByPath.set('Alpha/Bravo/Bravo.md', ['November']);
+      publishLinkTextsApi();
+      component.refresh();
+
+      expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta', 'November']);
+    });
+
+    it('should read none while the setting is off, and pick them up on the next refresh once it is on', () => {
+      linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Mike']);
+      settings.shouldMatchLinkTexts = false;
+      publishLinkTextsApi();
+      component.refresh();
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+
+      settings.shouldMatchLinkTexts = true;
+      component.refresh();
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+    });
+
+    it('should read none while the provider\'s module is off', () => {
+      publishLinkTextsApi({ isModuleOff: true });
+      component.refresh();
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    });
+
+    it('should forget exactly the files the provider says changed, folders included', () => {
+      publishLinkTextsApi();
+      component.refresh();
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta']);
+
+      // A link texts change comes from editing ANOTHER note, so no event about these files ever fires.
+      linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Oscar']);
+      linkTextsByPath.set('Alpha/Bravo/Bravo.md', ['Papa']);
+      notifyLinkTextsChanged(['Alpha/Bravo/Bravo.md']);
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta', 'Papa']);
+
+      notifyLinkTextsChanged(null);
+
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Oscar']);
+    });
+
+    it('should follow the provider across an unload and a reload, keeping one subscription', () => {
+      linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Mike']);
+      publishLinkTextsApi();
+      component.refresh();
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+
+      providerComponent.unload();
+      expect(linkTextsListeners).toHaveLength(0);
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+
+      publishLinkTextsApi();
+      expect(linkTextsListeners).toHaveLength(1);
+      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+    });
+
+    it('should end its subscription once unloaded', () => {
+      publishLinkTextsApi();
+      expect(linkTextsListeners).toHaveLength(1);
+
+      component.unload();
+
+      expect(linkTextsListeners).toHaveLength(0);
+    });
+  });
 });
+
+interface PublishLinkTextsApiOptions {
+  readonly isModuleOff?: boolean;
+}
 
 function fileAt(path: string): ReturnType<AppOriginal['vault']['getFileByPath']> {
   return ensureNonNullable(app.vault.getFileByPath(path), `Missing fixture file ${path}`);
@@ -163,6 +271,12 @@ function labelTextsOfFolder(path: string): string[] {
   return component.labelIndex.getFolderLabels(ensureNonNullable(app.vault.getFolderByPath(path), `Missing fixture folder ${path}`)).map((label) => label.text);
 }
 
+function notifyLinkTextsChanged(targetPaths: null | readonly string[]): void {
+  for (const listener of linkTextsListeners) {
+    listener(targetPaths);
+  }
+}
+
 /**
  * Publishes a stand-in for `Advanced Metadata Cache`'s API, answering from {@link titlePropertyNames} at call time.
  */
@@ -176,6 +290,43 @@ function publishAdvancedMetadataCacheApi(): void {
     apiVersion: '1.0.0',
     component: providerComponent,
     contract: ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT,
+    plugin: castTo<PluginOriginal>({ manifest: { id: ADVANCED_METADATA_CACHE_PLUGIN_ID } })
+  });
+}
+
+/**
+ * Publishes a stand-in for `Advanced Metadata Cache`'s link-texts API, answering from {@link linkTextsByPath} at
+ * call time. Its subscriptions end with the provider, the way a real plugin's listeners go when it unloads.
+ */
+function publishLinkTextsApi(options: PublishLinkTextsApiOptions = {}): void {
+  providerComponent = new Component();
+  providerComponent.load();
+  providerComponent.register(() => {
+    linkTextsListeners.length = 0;
+  });
+  publishPluginApi<AdvancedMetadataCacheLinkTextsApi>({
+    api: {
+      getLinkTexts: (pathOrFile): LinkText[] | null => {
+        if (options.isModuleOff) {
+          return null;
+        }
+
+        const path = typeof pathOrFile === 'string' ? pathOrFile : pathOrFile.path;
+        return (linkTextsByPath.get(path) ?? []).map((text) => ({ count: 1, sourcePaths: ['Source.md'], text }));
+      },
+      onLinkTextsChanged: (callback): () => void => {
+        linkTextsListeners.push(callback);
+        return (): void => {
+          const index = linkTextsListeners.indexOf(callback);
+          if (index !== -1) {
+            linkTextsListeners.splice(index, 1);
+          }
+        };
+      }
+    },
+    apiVersion: '1.9.0',
+    component: providerComponent,
+    contract: ADVANCED_METADATA_CACHE_LINK_TEXTS_API_CONTRACT,
     plugin: castTo<PluginOriginal>({ manifest: { id: ADVANCED_METADATA_CACHE_PLUGIN_ID } })
   });
 }

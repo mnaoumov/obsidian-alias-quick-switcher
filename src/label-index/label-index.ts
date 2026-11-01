@@ -30,6 +30,7 @@ import type { Label } from '../matching/segment-matcher.ts';
 import {
   ALIAS_LABEL_SOURCE,
   LabelSourceKind,
+  LINK_TEXT_LABEL_SOURCE,
   REAL_NAME_LABEL_SOURCE
 } from '../matching/segment-matcher.ts';
 
@@ -56,6 +57,12 @@ export interface LabelIndexConstructorParams {
 }
 
 /**
+ * Reads the display texts that links pointing at a file were written with, most used first. `null` means there is
+ * nothing to read: the provider's module is off.
+ */
+export type LinkTextsReader = (file: TFile) => null | readonly string[];
+
+/**
  * Answers what a file or folder is called, counting aliases.
  *
  * Every method is O(1) after the first call for a given path, which is the whole point — see the file
@@ -66,6 +73,7 @@ export class LabelIndex {
   private readonly fileLabels = new Map<string, readonly Label[]>();
   private readonly folderLabels = new Map<string, readonly Label[]>();
   private folderNoteConfig: FolderNoteConfig;
+  private linkTextsReader: LinkTextsReader | null = null;
   private titlePropertyNames: readonly string[];
 
   public constructor(params: LabelIndexConstructorParams) {
@@ -197,6 +205,23 @@ export class LabelIndex {
   }
 
   /**
+   * Sets where link texts are read from, forgetting every memoized answer when that actually changes.
+   *
+   * Compared by identity for the same reason {@link setTitlePropertyNames} compares its list: it is re-set on
+   * every switcher open, and the reader only changes when the provider reloads or the setting is toggled.
+   *
+   * @param linkTextsReader - The reader, or `null` to match no link texts.
+   */
+  public setLinkTextsReader(linkTextsReader: LinkTextsReader | null): void {
+    if (linkTextsReader === this.linkTextsReader) {
+      return;
+    }
+
+    this.linkTextsReader = linkTextsReader;
+    this.clear();
+  }
+
+  /**
    * Sets the title properties, forgetting every memoized answer when the list actually changes.
    *
    * Compared rather than adopted blindly because it is re-read on every switcher open and almost never changes
@@ -219,12 +244,14 @@ export class LabelIndex {
   /**
    * Reads every name a file answers to BESIDES its real one, each stamped with where it came from.
    *
-   * The two sources rank and render identically — that is {@link checkIsAliasLike}'s job — and are kept
+   * Aliases and titles rank and render identically — that is {@link checkIsAliasLike}'s job — and are kept
    * apart here for one reason only: the row's flair says WHICH of them matched, and a title marked as an
-   * alias tells the user something untrue about their own vault.
+   * alias tells the user something untrue about their own vault. Link texts come last, because they rank last,
+   * and the caller's deduplication drops any that only repeat a name declared above them.
    *
-   * @param file - The note to read.
-   * @returns Its aliases, then the values of each title property in configured order.
+   * @param file - The file to read. Not necessarily a note: an attachment has no frontmatter, and link texts are
+   *   often the only other name it has.
+   * @returns Its aliases, then the values of each title property in configured order, then its link texts.
    */
   private readNonRealNameLabels(file: TFile): Label[] {
     const frontmatter: FrontMatterCache | undefined = this.app.metadataCache.getFileCache(file)?.frontmatter ?? undefined;
@@ -240,6 +267,10 @@ export class LabelIndex {
           labels.push({ source, text: title });
         }
       }
+    }
+
+    for (const linkText of this.linkTextsReader?.(file) ?? []) {
+      labels.push({ source: LINK_TEXT_LABEL_SOURCE, text: linkText });
     }
 
     return labels;

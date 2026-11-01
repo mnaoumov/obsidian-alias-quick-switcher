@@ -41,6 +41,17 @@ export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: TypedApiContract<Advan
 };
 
 /**
+ * What the LINK TEXTS need — the read and its change feed, both published since contract `1.9.0`.
+ *
+ * Watched apart from the titles for the same reason as the migration below: an older provider simply does not
+ * offer it, the ref stays `null`, and the switcher matches without link texts instead of refusing to run.
+ */
+export const ADVANCED_METADATA_CACHE_LINK_TEXTS_API_CONTRACT: TypedApiContract<AdvancedMetadataCacheLinkTextsApi> = {
+  getLinkTexts: ADVANCED_METADATA_CACHE_API_CONTRACT.getLinkTexts,
+  onLinkTextsChanged: ADVANCED_METADATA_CACHE_API_CONTRACT.onLinkTextsChanged
+};
+
+/**
  * What the MIGRATION needs — the generic handover envelope, with the provider's own schemas.
  *
  * Contract `1.0.0` does not publish it. That is deliberate rather than a gap this plugin has to fill: against
@@ -51,6 +62,11 @@ export const ADVANCED_METADATA_CACHE_TITLES_API_CONTRACT: TypedApiContract<Advan
 export const ADVANCED_METADATA_CACHE_MIGRATION_API_CONTRACT: TypedApiContract<AdvancedMetadataCacheMigrationApi> = {
   migrateSettings: ADVANCED_METADATA_CACHE_API_CONTRACT.migrateSettings
 };
+
+/**
+ * The slice of `Advanced Metadata Cache`'s public API the label index reads link texts through.
+ */
+export type AdvancedMetadataCacheLinkTextsApi = Pick<AdvancedMetadataCacheFullApi, 'getLinkTexts' | 'onLinkTextsChanged'>;
 
 /**
  * The slice of `Advanced Metadata Cache`'s public API the label index calls.

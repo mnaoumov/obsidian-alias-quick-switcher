@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 2.2.0
+
+- chore(cspell): accept subfolders, which the release notes use
+- feat: add an Add alias command, seeded with the editor selection
+- feat: find a file by the link texts that point at it
+- docs(readme): point bug reports at the Report a bug command
+- feat: add a Report a bug command
+- docs: add issue-filing instructions for AI agents
+- chore(github): give the bug form the field ids bug-report links prefill
+- build(deps): override re2js to ^2.9.1 for GHSA-gg6h-894w-4m9c
+- feat: find notes by property in the switcher and the [[ link suggester
+- build(deps): bump typescript-dev-toolkit to ^5.2.0
+- build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
+- chore(deps): update fast-uri to 3.1.9
+- chore: adopt keyword identifier lint rule
+- chore: adopt readonly interface member linting
+- docs(readme): combine related resources and plugin comparisons
+- refactor: group src by subject into five subfolders
+- docs(readme): list similar plugins
+
 ## 2.1.2
 
 - style: format the demo-vault setup script

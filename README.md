@@ -77,6 +77,10 @@ Assign a hotkey to **`Alias Quick Switcher`: Open quick switcher** and type a pa
 
 Segments are separated by `/` or by spaces, and a partial path works: `Delta/Echo` is enough.
 
+### Add an alias
+
+Run **`Alias Quick Switcher`: Add alias...** on any open note, in an editor or in Reading view, or pick **Add alias...** from a note's menu in the file explorer. Type the alias and it is added to the note's `aliases` property. When text is selected in the note's editor, the prompt starts with that text. An empty value, the note's own name and an alias the note already has are refused.
+
 ### Find a note by a property
 
 Type a property term in core Search's own syntax to list the notes whose frontmatter holds a value: `[isoCode:uk]` finds the note with `isoCode: uk`, so a code never has to become an alias to be findable. Path text beside the term narrows the list: `[isoCode:uk] Reference`.

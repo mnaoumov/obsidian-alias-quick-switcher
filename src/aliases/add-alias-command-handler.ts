@@ -81,11 +81,9 @@ export class AddAliasCommandHandler extends FileCommandHandler {
 
   private getSelection(file: TFile): string {
     const activeEditor = this.app.workspace.activeEditor;
-    if (activeEditor?.file !== file || !activeEditor.editor) {
-      return '';
-    }
-
     // An alias is one line, so a selection spanning several is folded into one.
-    return activeEditor.editor.getSelection().replaceAll(/\s+/g, ' ').trim();
+    return activeEditor?.file === file && activeEditor.editor
+      ? activeEditor.editor.getSelection().replaceAll(/\s+/g, ' ').trim()
+      : '';
   }
 }

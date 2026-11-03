@@ -202,7 +202,7 @@ function createSuggest(): PropertyLinkSuggest {
 }
 
 function notePathsFor(query: string): string[] {
-  return createSuggest().getSuggestions(contextFor(query)).flatMap((row) => 'file' in row ? [row.file.path] : []);
+  return createSuggest().getSuggestions(contextFor(query)).flatMap((row) => 'file' in row ? row.file.path : []);
 }
 
 function select(before: string, after: string, row: PropertyLinkRow): string {

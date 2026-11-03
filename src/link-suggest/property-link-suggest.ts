@@ -209,10 +209,8 @@ export class PropertyLinkSuggest extends EditorSuggest<PropertyLinkRow> {
  * @returns The order.
  */
 function compareRows(left: PropertyLinkRow, right: PropertyLinkRow): number {
-  if ('file' in left && 'file' in right) {
-    return left.file.path.localeCompare(right.file.path);
-  }
-
   // Completions were pushed most common first, and a stable sort keeps them so.
-  return Number('file' in left) - Number('file' in right);
+  return 'file' in left && 'file' in right
+    ? left.file.path.localeCompare(right.file.path)
+    : Number('file' in left) - Number('file' in right);
 }

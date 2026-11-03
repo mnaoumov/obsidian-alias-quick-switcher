@@ -71,6 +71,7 @@ export const config = defineObsidianPluginVitestConfig({
     // Every vault must carry `Advanced Metadata Cache`, which this plugin declares as a dependency and loads
     // nothing without. Replaced BEFORE the capture projects below spread these two, so they inherit it.
     context.desktop.globalSetup = [GLOBAL_SETUP_FILE];
+    context.desktopAfterLayoutReadyGlobalSetup = ['./scripts/vitest-global-setup-after-layout-ready.ts'];
     context.android.globalSetup = [GLOBAL_SETUP_FILE];
 
     return [

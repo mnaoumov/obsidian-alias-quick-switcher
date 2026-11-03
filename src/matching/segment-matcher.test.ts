@@ -106,8 +106,8 @@ describe('matchPath', () => {
    */
   describe('a label read from a frontmatter property', () => {
     const PROPERTY_POSITIONS = [
-      buildPropertyPosition('Bravo', 'title', 'Delta'),
-      buildPropertyPosition('Charlie', 'title', 'Echo')
+      buildPropertyPosition('Bravo', 'Delta'),
+      buildPropertyPosition('Charlie', 'Echo')
     ];
 
     it.each([
@@ -365,15 +365,14 @@ function buildPosition(name: string, ...aliases: string[]): PathPosition {
  * A position whose extra name comes from a frontmatter property rather than from `aliases`.
  *
  * @param name - The position's real name.
- * @param propertyName - The frontmatter key the extra name was read from.
  * @param text - The extra name.
  * @returns The position.
  */
-function buildPropertyPosition(name: string, propertyName: string, text: string): PathPosition {
+function buildPropertyPosition(name: string, text: string): PathPosition {
   return {
     labels: [
       { source: REAL_NAME_LABEL_SOURCE, text: name },
-      { source: { kind: LabelSourceKind.Property, propertyName }, text }
+      { source: { kind: LabelSourceKind.Property, propertyName: 'title' }, text }
     ]
   };
 }

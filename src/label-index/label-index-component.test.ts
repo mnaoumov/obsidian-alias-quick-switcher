@@ -77,15 +77,15 @@ beforeEach(() => {
 
 describe('LabelIndexComponent', () => {
   it('should build an index that answers from the vault', () => {
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
     expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta']);
   });
 
   it('should forget a file whose metadata changed', () => {
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
     writeAliases('Alpha/Bravo/Charlie.md', ['Foxtrot']);
-    app.metadataCache.trigger('changed', fileAt('Alpha/Bravo/Charlie.md'), '', {});
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Foxtrot']);
+    app.metadataCache.trigger('changed', fixtureFile(), '', {});
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Foxtrot']);
   });
 
   it('should forget a folder whose folder note has just been created', () => {
@@ -100,25 +100,25 @@ describe('LabelIndexComponent', () => {
   });
 
   it('should forget the whole subtree of a folder that was renamed', () => {
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
     writeAliases('Alpha/Bravo/Charlie.md', ['Hotel']);
-    app.vault.trigger('rename', folderAt('Alpha/Bravo'), 'Alpha/Renamed');
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Hotel']);
+    app.vault.trigger('rename', fixtureFolder(), 'Alpha/Renamed');
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Hotel']);
   });
 
   it('should forget a deleted folder rather than keep answering for it', () => {
     expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta']);
     writeAliases('Alpha/Bravo/Bravo.md', ['India']);
-    app.vault.trigger('delete', folderAt('Alpha/Bravo'));
+    app.vault.trigger('delete', fixtureFolder());
     expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'India']);
   });
 
   it('should stop listening once unloaded', () => {
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
     component.unload();
     writeAliases('Alpha/Bravo/Charlie.md', ['Juliett']);
-    app.metadataCache.trigger('changed', fileAt('Alpha/Bravo/Charlie.md'), '', {});
-    expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+    app.metadataCache.trigger('changed', fixtureFile(), '', {});
+    expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
   });
 
   describe('refresh', () => {
@@ -127,21 +127,21 @@ describe('LabelIndexComponent', () => {
 
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie']);
     });
 
     it('should adopt the title properties the other plugin has since been configured with', () => {
       publishAdvancedMetadataCacheApi();
       appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { title: 'Kilo' } });
       component.refresh();
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie']);
 
       // Read LIVE on every open rather than copied at load: a user reconfiguring the other plugin is seen by the
       // next switcher, with nothing of it stored in this plugin.
       titlePropertyNames = ['title'];
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Kilo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Kilo']);
     });
 
     it('should fall back to aliases alone once the other plugin withdraws its API', () => {
@@ -149,12 +149,12 @@ describe('LabelIndexComponent', () => {
       titlePropertyNames = ['title'];
       appMock.metadataCache.cache__.set('Alpha/Bravo/Charlie.md', { frontmatter: { title: 'Kilo' } });
       component.refresh();
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Kilo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Kilo']);
 
       providerComponent.unload();
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie']);
     });
 
     it('should re-resolve the folder-note setup, so reconfiguring the other plugin needs no migration', () => {
@@ -174,8 +174,8 @@ describe('LabelIndexComponent', () => {
       publishLinkTextsApi();
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
-      expect(component.labelIndex.getFileLabels(ensureNonNullable(fileAt('Alpha/Bravo/Charlie.md'))).map((label) => label.source.kind)).toStrictEqual(['RealName', 'Alias', 'LinkText']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+      expect(component.labelIndex.getFileLabels(ensureNonNullable(fixtureFile())).map((label) => label.source.kind)).toStrictEqual(['RealName', 'Alias', 'LinkText']);
     });
 
     it('should name a folder by the link texts of its folder note', () => {
@@ -191,25 +191,25 @@ describe('LabelIndexComponent', () => {
       settings.shouldMatchLinkTexts = false;
       publishLinkTextsApi();
       component.refresh();
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
 
       settings.shouldMatchLinkTexts = true;
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo', 'Mike']);
     });
 
     it('should read none while the provider\'s module is off', () => {
       publishLinkTextsApi({ isModuleOff: true });
       component.refresh();
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
     });
 
     it('should forget exactly the files the provider says changed, folders included', () => {
       publishLinkTextsApi();
       component.refresh();
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
       expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta']);
 
       // A link texts change comes from editing ANOTHER note, so no event about these files ever fires.
@@ -217,27 +217,27 @@ describe('LabelIndexComponent', () => {
       linkTextsByPath.set('Alpha/Bravo/Bravo.md', ['Papa']);
       notifyLinkTextsChanged(['Alpha/Bravo/Bravo.md']);
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
       expect(labelTextsOfFolder('Alpha/Bravo')).toStrictEqual(['Bravo', 'Delta', 'Papa']);
 
       notifyLinkTextsChanged(null);
 
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Oscar']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo', 'Oscar']);
     });
 
     it('should follow the provider across an unload and a reload, keeping one subscription', () => {
       linkTextsByPath.set('Alpha/Bravo/Charlie.md', ['Mike']);
       publishLinkTextsApi();
       component.refresh();
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo', 'Mike']);
 
       providerComponent.unload();
       expect(linkTextsListeners).toHaveLength(0);
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo']);
 
       publishLinkTextsApi();
       expect(linkTextsListeners).toHaveLength(1);
-      expect(labelTextsOfFile('Alpha/Bravo/Charlie.md')).toStrictEqual(['Charlie', 'Echo', 'Mike']);
+      expect(fixtureFileLabelTexts()).toStrictEqual(['Charlie', 'Echo', 'Mike']);
     });
 
     it('should end its subscription once unloaded', () => {
@@ -255,16 +255,19 @@ interface PublishLinkTextsApiOptions {
   readonly isModuleOff?: boolean;
 }
 
-function fileAt(path: string): ReturnType<AppOriginal['vault']['getFileByPath']> {
+function fixtureFile(): ReturnType<AppOriginal['vault']['getFileByPath']> {
+  const path = 'Alpha/Bravo/Charlie.md';
   return ensureNonNullable(app.vault.getFileByPath(path), `Missing fixture file ${path}`);
 }
 
-function folderAt(path: string): ReturnType<AppOriginal['vault']['getFolderByPath']> {
-  return ensureNonNullable(app.vault.getFolderByPath(path), `Missing fixture folder ${path}`);
+function fixtureFileLabelTexts(): string[] {
+  const path = 'Alpha/Bravo/Charlie.md';
+  return component.labelIndex.getFileLabels(ensureNonNullable(app.vault.getFileByPath(path), `Missing fixture file ${path}`)).map((label) => label.text);
 }
 
-function labelTextsOfFile(path: string): string[] {
-  return component.labelIndex.getFileLabels(ensureNonNullable(app.vault.getFileByPath(path), `Missing fixture file ${path}`)).map((label) => label.text);
+function fixtureFolder(): ReturnType<AppOriginal['vault']['getFolderByPath']> {
+  const path = 'Alpha/Bravo';
+  return ensureNonNullable(app.vault.getFolderByPath(path), `Missing fixture folder ${path}`);
 }
 
 function labelTextsOfFolder(path: string): string[] {

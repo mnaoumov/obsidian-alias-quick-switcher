@@ -31,7 +31,7 @@ You gave a note an alias so you could find it by the name you actually call it, 
 
 **The documentation is a demo vault.** Every feature has a note that explains what it does, with a worked example you can search yourself.
 
-**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on `GitHub` with nothing installed.
 
 A copy of the vault ships with every release. You can access it via any of the following:
 

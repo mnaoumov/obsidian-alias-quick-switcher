@@ -2,38 +2,42 @@
 
 ## 2.2.0
 
-- chore(`cspell`): accept subfolders, which the release notes use
-- feat: add an Add alias command, seeded with the editor selection
-- feat: find a file by the link texts that point at it
-- docs(readme): point bug reports at the Report a bug command
-- feat: add a Report a bug command
-- docs: add issue-filing instructions for AI agents
-- chore(github): give the bug form the field ids bug-report links prefill
-- build(deps): override re2js to ^2.9.1 for GHSA-gg6h-894w-4m9c
-- feat: find notes by property in the switcher and the [[ link suggester
-- build(deps): bump `typescript-dev-toolkit` to ^5.2.0
-- build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
-- chore(deps): update fast-uri to 3.1.9
-- chore: adopt keyword identifier lint rule
-- chore: adopt readonly interface member linting
-- docs(readme): combine related resources and plugin comparisons
-- refactor: group src by subject into five subfolders
-- docs(readme): list similar plugins
+This release has 4 new features and 4 documentation changes. 9 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add an Add alias command, seeded with the editor selection
+- find a file by the link texts that point at it
+- add a Report a bug command
+- find notes by property in the switcher and the [[ link suggester
+
+### Documentation
+
+- **readme:** point bug reports at the Report a bug command
+- add issue-filing instructions for AI agents
+- **readme:** combine related resources and plugin comparisons
+- **readme:** list similar plugins
 
 ## 2.1.2
 
-- style: format the demo-vault setup script
-- test(demo-vault): floor `CodeScript Toolkit` at 15.0.0
-- test: seed `Advanced Metadata Cache` 2.0.3 into the integration vaults
-- build(deps): move to `obsidian-lib` 6 and `obsidian-dev-toolkit` 5
-- docs: shorten the debugging section
-- fix(demo-vault): load the demo setup helpers from @mnaoumov/obsidian-lib
-- docs(readme): lead the Debugging section with `Advanced Debug Mode`
+This release has 1 fix and 2 documentation changes. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **demo-vault:** load the demo setup helpers from @mnaoumov/obsidian-lib
+
+### Documentation
+
+- shorten the debugging section
+- **readme:** lead the Debugging section with `Advanced Debug Mode`
 
 ## 2.1.1
 
-- build(deps): clear the brace-expansion, sharp and fast-uri advisories
-- docs(changelog): add the 2.1.0 excluded paths migration note
+This release has 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Documentation
+
+- **changelog:** add the 2.1.0 excluded paths migration note
 
 ## 2.1.0
 
@@ -54,49 +58,45 @@ Migration: excluded-path entries now match case-insensitively in every form. An 
 
 ## 2.0.0
 
-- test(migration): merge driving the retired property handover against the real provider
-- test(screenshots): merge setting the desktop capture theme with applyObsidianTheme
-- chore(deps): merge floating `obsidian-integration-testing` to ^17.3.0 and re-shooting the now byte-stable desktop frames
-- chore(lint): merge dropping the local MD025 front-matter-title override
-- chore(deps): merge floating `obsidian-integration-testing` to ^17.1.1 and re-shooting the mobile frames
-- chore(deps): merge floating `obsidian-integration-testing` to ^17.1.0 and re-shooting the caret-free desktop frames
-- test(screenshots): merge clearing the dependency-gate notice before each desktop frame
-- chore(deps): merge floating `obsidian-integration-testing` to ^17.0.1 with `obsidian-dev-utils` ^107.0.0
-- docs(test): merge pointing the dead TARGET_FOLDER link at TARGET_FOLDER_NAME
-- chore(deps): merge floating `obsidian-test-mocks` to ^7.0.0
-- feat!: merge taking the title properties from `Advanced Metadata Cache`
-- fix(test): merge the headless demo-vault toolkit install
-- fix(deps): restore the lockfile's missing resolved and integrity fields
-- docs(demo-vault): demonstrate the extra label property, and frame its marker
-- feat: say which kind of name matched, with the property's own marker
-- docs(test): replace the withdrawn Electron-only premise on the query typing
-- test: pick the suggestion row with a trusted tap
-- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
-- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
-- chore(deps): drop the two dead dedupe overrides
-- chore(deps): drop the dead markdown-it override
-- chore(deps): drop the dead js-yaml override
-- style(comments): stop capitalizing the middle of a wrapped comment
-- docs: replace the private rule-id citations with what they assert
-- docs: name the library and the sibling plugins so a reader can resolve them
-- test(cross-platform): close the switcher with a trusted Escape
-- chore(deps): move to `obsidian-dev-utils` 103
-- test(integration): take the mobile frames with the soft keyboard up
-- chore: adopt the `npm` run gate branch gate
-- docs: bring the README onto the standard plugin README layout
-- test: wait from Node, so the 60s budgets are ones the transport can honour
-- refactor(android): drive the Android suites with trusted input
-- chore: make the LICENSE copyright line checkable by the linter and guard it against the year roll-over
-- test(test-mocks): drop the hand-rolled app.plugins stubs, and sweep the dependencies
-- docs(readme): add the Coverage 100% badge
-- docs(readme): add the screenshot block, and put the demo vault first
+This release has 1 breaking change, 1 new feature, 3 fixes and 8 documentation changes. 23 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Breaking changes
+
+- merge taking the title properties from `Advanced Metadata Cache`
+
+### New
+
+- say which kind of name matched, with the property's own marker
+
+### Fixed
+
+- **test:** merge the headless demo-vault toolkit install
+- **deps:** restore the lockfile's missing resolved and integrity fields
+- **deps:** float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+
+### Documentation
+
+- **test:** merge pointing the dead TARGET_FOLDER link at TARGET_FOLDER_NAME
+- **demo-vault:** demonstrate the extra label property, and frame its marker
+- **test:** replace the withdrawn Electron-only premise on the query typing
+- replace the private rule-id citations with what they assert
+- name the library and the sibling plugins so a reader can resolve them
+- bring the README onto the standard plugin README layout
+- **readme:** add the Coverage 100% badge
+- **readme:** add the screenshot block, and put the demo vault first
 
 ## 1.0.0
 
-- feat: the built-in switcher's row, on `obsidian-dev-utils` 100, ready for 1.0.0
-- feat: match aliases in every path segment, and show which one matched
-- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
-- chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
-- fix(deps): drop the brace-expansion file: override that breaks a clean install
-- feat: scaffold `Alias Quick Switcher`
+This release has 3 new features and 3 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- the built-in switcher's row, on `obsidian-dev-utils` 100, ready for 1.0.0
+- match aliases in every path segment, and show which one matched
+- scaffold `Alias Quick Switcher`
+
+### Fixed
+
+- **build:** wire build:compile to buildCompile and drop the duplicate leaf script
+- **deps:** move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
+- **deps:** drop the brace-expansion file: override that breaks a clean install

@@ -10,6 +10,14 @@ const TITLES_PLUGIN_ID = 'advanced-metadata-cache';
 const SWITCHER_COMMAND_ID = 'open';
 const SWITCHER_INPUT_SELECTOR = '.alias-quick-switcher-modal .prompt-input';
 
+interface PluginSettingsComponent {
+  readonly editAndSave: (settingsEditor: (settings: Record<string, unknown>) => void) => Promise<void>;
+}
+
+interface SettingsComponentHolder {
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 /**
  * Opens the switcher with a query already in its search field, so a note can hand the reader the result
  * of a query rather than the instruction to type one.
@@ -27,9 +35,9 @@ const SWITCHER_INPUT_SELECTOR = '.alias-quick-switcher-modal .prompt-input';
 export function openSwitcherWithQuery(app: App, query: string): void {
   runCommand(app, SWITCHER_COMMAND_ID);
 
-  const input = document.querySelector(SWITCHER_INPUT_SELECTOR);
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`The switcher has no search field to type into — type ${query} into it yourself.`);
+  const input = activeDocument.querySelector(SWITCHER_INPUT_SELECTOR);
+  if (!input?.instanceOf(HTMLInputElement)) {
+    throw new TypeError(`The switcher has no search field to type into — type ${query} into it yourself.`);
   }
 
   // A notification that the value changed, not a pretend keystroke: `SuggestModal` rebuilds its list from
@@ -45,7 +53,7 @@ export function openSwitcherWithQuery(app: App, query: string): void {
  */
 export function runCommand(app: App, commandId: string): void {
   const fullCommandId = `${PLUGIN_ID}:${commandId}`;
-  if (!app.commands.commands[fullCommandId]) {
+  if (!Object.hasOwn(app.commands.commands, fullCommandId)) {
     new Notice(`Command ${fullCommandId} is not registered — is the plugin enabled?`);
     return;
   }
@@ -61,13 +69,12 @@ export function runCommand(app: App, commandId: string): void {
  */
 export async function setSetting(app: App, propertyName: string, value: unknown): Promise<void> {
   const plugin = app.plugins.getPlugin(PLUGIN_ID);
-  if (!plugin) {
+  if (!isSettingsComponentHolder(plugin)) {
     new Notice(`Plugin ${PLUGIN_ID} is not enabled`);
     return;
   }
 
-  const settingsComponent = (plugin as unknown as SettingsComponentHolder).pluginSettingsComponent;
-  await settingsComponent.editAndSave((settings: Record<string, unknown>) => {
+  await plugin.pluginSettingsComponent.editAndSave((settings: Record<string, unknown>) => {
     settings[propertyName] = value;
   });
   new Notice(`${propertyName} is now ${String(value)}`);
@@ -84,20 +91,18 @@ export async function setSetting(app: App, propertyName: string, value: unknown)
  */
 export async function setTitlesModuleEnabled(app: App, isEnabled: boolean): Promise<void> {
   const plugin = app.plugins.getPlugin(TITLES_PLUGIN_ID);
-  if (!plugin) {
+  if (!isSettingsComponentHolder(plugin)) {
     new Notice(`Plugin ${TITLES_PLUGIN_ID} is not enabled`);
     return;
   }
 
-  const settingsComponent = (plugin as unknown as SettingsComponentHolder).pluginSettingsComponent;
-  await settingsComponent.editAndSave((settings: Record<string, unknown>) => {
+  await plugin.pluginSettingsComponent.editAndSave((settings: Record<string, unknown>) => {
     settings['isTitlesModuleEnabled'] = isEnabled;
   });
   new Notice(`The Titles module is now ${isEnabled ? 'on' : 'off'}`);
 }
 
-interface SettingsComponentHolder {
-  pluginSettingsComponent: {
-    editAndSave(settingsEditor: (settings: Record<string, unknown>) => void): Promise<void>;
-  };
+// Both plugins build on `@mnaoumov/obsidian-lib`, whose plugin base exposes its settings component here.
+function isSettingsComponentHolder(plugin: unknown): plugin is SettingsComponentHolder {
+  return typeof plugin === 'object' && plugin !== null && 'pluginSettingsComponent' in plugin;
 }

@@ -46,7 +46,7 @@ const LINK_TARGET_NAMES: Record<string, Record<string, string[]>> = {
 };
 
 const context: PropertyFilterContext = {
-  getFrontmatter: (file) => FRONTMATTER[file.path],
+  getFrontmatter: (file) => FRONTMATTER[file.path] ?? null,
   getLinkTargetNames: (file, key) => LINK_TARGET_NAMES[file.path]?.[key] ?? []
 };
 
@@ -113,7 +113,7 @@ describe('checkPropertyQuery, matched against what core Search returned for the 
 
   it('should match nothing in a note with no frontmatter', () => {
     expect(checkPropertyQuery({
-      context: { getFrontmatter: () => undefined, getLinkTargetNames: () => [] },
+      context: { getFrontmatter: () => null, getLinkTargetNames: () => [] },
       file: castTo<TFile>({ path: 'X.md' }),
       query: parsePropertyQuery('[isoCode]')
     })).toBe(false);
@@ -141,7 +141,7 @@ describe('collectPropertyValues', () => {
   it('should count a value once per note, and spell it as first met', () => {
     const counted = collectPropertyValues({
       context: {
-        getFrontmatter: (file) => ({ 'Q.md': { langs: ['uk', 'UK'] }, 'R.md': { langs: 'Uk' }, 'S.md': { langs: 'en' } })[file.path],
+        getFrontmatter: (file) => ({ 'Q.md': { langs: ['uk', 'UK'] }, 'R.md': { langs: 'Uk' }, 'S.md': { langs: 'en' } })[file.path] ?? null,
         getLinkTargetNames: () => []
       },
       files: ['Q.md', 'R.md', 'S.md'].map((path) => castTo<TFile>({ path })),
@@ -152,7 +152,7 @@ describe('collectPropertyValues', () => {
 
   it('should collect nothing from a note with no frontmatter', () => {
     expect(collectPropertyValues({
-      context: { getFrontmatter: () => undefined, getLinkTargetNames: () => [] },
+      context: { getFrontmatter: () => null, getLinkTargetNames: () => [] },
       files: [castTo<TFile>({ path: 'X.md' })],
       keyPattern: parsePropertyQuery('[langs]').groups[0]?.[0]?.key ?? expect.unreachable()
     })).toStrictEqual([]);

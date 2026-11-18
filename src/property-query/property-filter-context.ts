@@ -22,7 +22,7 @@ import { LabelSourceKind } from '../matching/segment-matcher.ts';
  */
 export function createPropertyFilterContext(app: App, labelIndex: LabelIndex): PropertyFilterContext {
   return {
-    getFrontmatter: (file: TFile) => app.metadataCache.getFileCache(file)?.frontmatter,
+    getFrontmatter: (file: TFile) => app.metadataCache.getFileCache(file)?.frontmatter ?? null,
     getLinkTargetNames: (file: TFile, key: string): readonly string[] => {
       const names: string[] = [];
 

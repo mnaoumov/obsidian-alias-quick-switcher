@@ -31,7 +31,7 @@ interface ProtectedBase {
 
 interface RegisteredValidator {
   readonly key: string;
-  readonly validator: (value: number) => string | undefined;
+  readonly validator: (value: number) => null | string;
 }
 
 const protectedBasePrototype = castTo<ProtectedBase>(PluginSettingsComponentBase.prototype);
@@ -64,6 +64,8 @@ describe('PluginSettingsComponent', () => {
       const component = new PluginSettingsComponent({
         dataHandler: strictProxy<DataHandler>({
           loadData: () => Promise.resolve(record),
+          // No device-local recovery copies: what is under test is the legacy converter, not the recovery path.
+          recoveryStore: null,
           saveData: (data: unknown) => {
             saved.push(structuredClone(data));
             return noopAsync();
@@ -117,7 +119,7 @@ describe('PluginSettingsComponent', () => {
 
     it('should accept a recency tiebreak of zero or more', () => {
       const validator = getRegisteredValidators().find((candidate) => candidate.key === 'recentFilesBoostCount');
-      expect(validator?.validator(0)).toBeUndefined();
+      expect(validator?.validator(0)).toBeNull();
     });
   });
 });

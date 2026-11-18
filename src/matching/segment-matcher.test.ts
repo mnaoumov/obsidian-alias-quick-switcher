@@ -207,8 +207,8 @@ describe('matchPath', () => {
   it('should score an exact label above a prefix above a substring', () => {
     const positions = [buildPosition('Charlie')];
 
-    function qualityOf(query: string): LabelMatchQuality | undefined {
-      return matchPath({ mode: SegmentMatchMode.Substring, positions, tokens: tokenizeQuery(query) })?.positions[0]?.quality;
+    function qualityOf(query: string): LabelMatchQuality | null {
+      return matchPath({ mode: SegmentMatchMode.Substring, positions, tokens: tokenizeQuery(query) })?.positions[0]?.quality ?? null;
     }
 
     expect(qualityOf('Charlie')).toBe(LabelMatchQuality.Exact);

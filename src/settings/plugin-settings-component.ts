@@ -1,6 +1,5 @@
 import type { DataHandler } from '@mnaoumov/obsidian-lib/data-handler';
 import type { PluginEventSource } from '@mnaoumov/obsidian-lib/plugin/plugin-event-source';
-import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 
 import { PluginSettingsComponentBase } from '@mnaoumov/obsidian-lib/components/plugin-settings-component';
 import { pathsValidator } from '@mnaoumov/obsidian-lib/path-settings';
@@ -43,11 +42,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 
   protected override registerValidators(): void {
     super.registerValidators();
-    this.registerValidator('recentFilesBoostCount', (value): MaybeReturn<string> => {
-      if (value < 0) {
-        return 'The recency tiebreak cannot be negative';
-      }
-    });
+    this.registerValidator('recentFilesBoostCount', (value): null | string => value < 0 ? 'The recency tiebreak cannot be negative' : null);
     // An entry that is not a valid pattern does not throw when assigned — the whole list silently falls back to its
     // default pattern — so this validator is the only thing that tells the user their pattern is broken.
     this.registerValidator('excludedPathPatterns', pathsValidator);

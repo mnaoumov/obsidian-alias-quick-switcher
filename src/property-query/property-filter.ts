@@ -56,9 +56,9 @@ export interface CollectPropertyValuesParams {
  */
 export interface PropertyFilterContext {
   /**
-   * The note's frontmatter, or `undefined` when it has none.
+   * The note's frontmatter, or `null` when it has none.
    */
-  readonly getFrontmatter: (file: TFile) => FrontMatterCache | undefined;
+  readonly getFrontmatter: (file: TFile) => FrontMatterCache | null;
 
   /**
    * The names the note a frontmatter link points to answers to, for every link the note holds under `key`.
@@ -77,7 +77,7 @@ export interface PropertyValueCount {
 interface CheckTermParams {
   readonly context: PropertyFilterContext;
   readonly file: TFile;
-  readonly frontmatter: FrontMatterCache | undefined;
+  readonly frontmatter: FrontMatterCache | null;
   readonly term: PropertyTerm;
 }
 

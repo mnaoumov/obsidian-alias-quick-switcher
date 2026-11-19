@@ -41,20 +41,23 @@ This release has 1 documentation change. 1 maintenance commit (tests, build, CI,
 
 ## 2.1.0
 
+This release has 1 new feature, 1 fix and 3 documentation changes. 7 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
 Migration: excluded-path entries now match case-insensitively in every form. An unescaped `*`, `?` or `[` makes an entry a glob (`*.pdf`, `Archive/**/Draft*`, `tmp*/`), so a plain path that contains one of those characters literally must escape it (`Notes \[old\]`). An entry shaped `/pattern/flags` is a regular expression whose flags are honoured, and a folder-only glob (ending in `/`) hides the folder row itself as well as its contents.
 
-- feat: match excluded paths case-insensitively, with globs and regex flags
-- docs: mark plugin names as code
-- build(deps): merge taking `obsidian-lib` 4.3.0 and its validation debug switch
-- chore(github): point questions to Discussions from the new-issue page
-- ci: merge attesting release assets through the toolkit's reusable workflow
-- refactor(deps): merge moving off `obsidian-dev-utils` onto the @mnaoumov packages
-- refactor(api): merge re-copying the `Advanced Metadata Cache` contract in its short `typescript-lib` form
-- refactor(api): merge building the `Advanced Metadata Cache` contracts from the provider's copied contract
-- fix(settings): merge marking plugin names as code in the settings tab, docs and comments
-- chore(screenshots): merge keeping five desktop frames, matching the directory listing
-- docs(readme): merge pointing the install line at the community directory listing
-- docs(agents): merge restating the registry invariant now that 2.0.0 carries the dependency
+### New
+
+- match excluded paths case-insensitively, with globs and regex flags
+
+### Fixed
+
+- **settings:** mark plugin names as code in the settings tab
+
+### Documentation
+
+- mark plugin names as code
+- **readme:** point the install line at the community directory listing
+- **agents:** restate the registry invariant now that 2.0.0 carries the dependency
 
 ## 2.0.0
 

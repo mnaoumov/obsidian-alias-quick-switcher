@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2.2.1
+
+This release has 4 documentation changes. 7 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- **changelog:** rewrite the 2.1.0 release notes for readers
+- **changelog:** regroup the published release notes for readers
+- make issue attachments optional and strongly encouraged
+- link to the Obsidian resources page
+
 ## 2.2.0
 
 This release has 4 new features and 4 documentation changes. 9 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
